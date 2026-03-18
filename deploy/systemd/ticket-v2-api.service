@@ -1,0 +1,17 @@
+[Unit]
+Description=Sistema de Ticket V2 API
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/ticket-v2
+Environment=NODE_ENV=production
+EnvironmentFile=/var/www/ticket-v2/.env
+ExecStart=/usr/bin/node /var/www/ticket-v2/apps/api/dist/main.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

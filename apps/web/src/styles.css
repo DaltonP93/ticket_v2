@@ -1,0 +1,467 @@
+:root {
+  color-scheme: light;
+  --bg: #f4efe6;
+  --paper: rgba(255, 255, 255, 0.82);
+  --ink: #0f172a;
+  --muted: #5f6c7b;
+  --line: rgba(15, 23, 42, 0.12);
+  --accent: #006d77;
+  --accent-strong: #024d54;
+  --warm: #f2c57c;
+  --shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(0, 109, 119, 0.18), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(242, 197, 124, 0.28), transparent 28%),
+    linear-gradient(135deg, #f7f3eb 0%, #eef5f6 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  padding: 24px;
+  border-right: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(18px);
+}
+
+.brand {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent), #0a9396);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.brand strong,
+.brand span,
+.sidebar-card h4,
+.sidebar-card p,
+.nav-item,
+.subtitle,
+.eyebrow,
+.topbar-meta span,
+.metric-card span,
+.metric-card strong,
+.card-header h3,
+.card-header span,
+.ticket-type-card strong,
+.ticket-type-card p,
+.list-row strong,
+.list-row span,
+.form-grid label,
+.receipt,
+.status-pill {
+  display: block;
+}
+
+.brand span,
+.sidebar-card p,
+.subtitle,
+.topbar-meta span,
+.metric-card span,
+.card-header span,
+.list-row span,
+.receipt-note {
+  color: var(--muted);
+}
+
+.nav {
+  display: grid;
+  gap: 10px;
+}
+
+.locale-switcher {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.locale-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+}
+
+.locale-chip.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.nav-item {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-item.active,
+.nav-item:hover {
+  background: rgba(0, 109, 119, 0.1);
+}
+
+.sidebar-card {
+  margin-top: 24px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(0, 109, 119, 0.1), rgba(255, 255, 255, 0.7));
+}
+
+.content {
+  padding: 28px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 3.2rem);
+  line-height: 0.95;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+
+.subtitle {
+  max-width: 720px;
+  font-size: 1rem;
+}
+
+.topbar-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.topbar-meta span,
+.status-pill {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--line);
+}
+
+.floating-tabs {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.floating-tabs button {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: var(--accent-strong);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.page-grid,
+.content-grid,
+.metrics-grid,
+.ticket-type-grid,
+.form-grid,
+.list-table,
+.panel-preview-history {
+  display: grid;
+  gap: 18px;
+}
+
+.metrics-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 24px;
+}
+
+.metric-card,
+.panel-card,
+.panel-preview {
+  border-radius: 28px;
+  background: var(--paper);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
+}
+
+.metric-card {
+  padding: 20px;
+}
+
+.metric-card strong {
+  margin-top: 8px;
+  font-size: 2rem;
+}
+
+.content-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel-card,
+.panel-preview {
+  padding: 22px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  margin-bottom: 18px;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.ticket-type-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ticket-type-grid.compact {
+  margin-top: 18px;
+}
+
+.ticket-type-card,
+.ticket-emit-button {
+  border-radius: 20px;
+  padding: 18px;
+  border: 0;
+}
+
+.ticket-emit-button {
+  cursor: pointer;
+  text-align: left;
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.12);
+}
+
+.primary-button {
+  margin-top: 18px;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, var(--accent), #0a9396);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.list-row:last-child {
+  border-bottom: 0;
+}
+
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 18px;
+}
+
+.form-grid label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.receipt {
+  max-width: 320px;
+  margin: 12px auto 0;
+  padding: 24px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #fff 0%, #f3f5f7 100%);
+  color: #111827;
+  border: 1px dashed rgba(17, 24, 39, 0.24);
+}
+
+.receipt-brand {
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.receipt-number {
+  margin: 20px 0;
+  text-align: center;
+  font-size: 2.4rem;
+  font-weight: 800;
+}
+
+.receipt-details {
+  display: grid;
+  gap: 8px;
+}
+
+.receipt-note {
+  margin-top: 16px;
+  font-size: 0.92rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.info-item {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--line);
+}
+
+.info-item span,
+.announcement-box span,
+.empty-copy,
+.announcement-copy {
+  color: var(--muted);
+}
+
+.info-item strong,
+.announcement-box strong {
+  display: block;
+  margin-top: 6px;
+}
+
+.announcement-box {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(7, 17, 31, 0.04);
+  border: 1px solid var(--line);
+}
+
+.announcement-copy {
+  margin: 0;
+}
+
+.empty-copy {
+  margin: 22px 0 0;
+}
+
+.public-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    linear-gradient(135deg, #07111f 0%, #102847 100%);
+  color: #eef7ff;
+}
+
+.public-panel .call-chip {
+  background: linear-gradient(135deg, #35b7ff, #0a9396);
+}
+
+.spaced-top {
+  margin-top: 24px;
+}
+
+.panel-preview-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid;
+}
+
+.panel-preview-call {
+  display: grid;
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.call-chip {
+  width: fit-content;
+  padding: 12px 16px;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 800;
+}
+
+.panel-history-row,
+.connector-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+@media (max-width: 1100px) {
+  .shell,
+  .two-column-layout,
+  .metrics-grid,
+  .content-grid,
+  .ticket-type-grid,
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+}

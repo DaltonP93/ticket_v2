@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Unit {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  brandName   String
+  services    Service[]
+  ticketTypes TicketType[]
+}
+
+model Department {
+  id       String    @id @default(cuid())
+  name     String
+  services Service[]
+}
+
+model Service {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  allowPriority Boolean  @default(true)
+  unitId        String
+  departmentId  String
+  unit          Unit     @relation(fields: [unitId], references: [id])
+  department    Department @relation(fields: [departmentId], references: [id])
+}
+
+model TicketType {
+  id                        String @id @default(cuid())
+  code                      String @unique
+  name                      String
+  description               String
+  color                     String
+  textColor                 String
+  baseWeight                Int    @default(0)
+  requireClient             Boolean @default(false)
+  requireDocument           Boolean @default(false)
+  requireExternalValidation Boolean @default(false)
+  allowPrint                Boolean @default(true)
+  allowPanel                Boolean @default(true)
+  unitId                    String
+  unit                      Unit   @relation(fields: [unitId], references: [id])
+}
+

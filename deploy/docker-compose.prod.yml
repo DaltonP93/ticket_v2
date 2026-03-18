@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ticket_v2
+      POSTGRES_PASSWORD: ticket_v2
+      POSTGRES_DB: ticket_v2
+    volumes:
+      - ticket_v2_postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - ticket_v2_redis:/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      APP_NAME: Sistema de Ticket V2
+      PORT: 4010
+      DATABASE_URL: postgresql://ticket_v2:ticket_v2@postgres:5432/ticket_v2?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: https://tickets.midominio.com/api
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  ticket_v2_postgres:
+  ticket_v2_redis:
