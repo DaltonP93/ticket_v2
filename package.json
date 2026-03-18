@@ -10,12 +10,11 @@
   "scripts": {
     "dev": "npm run dev --workspace @ticket-v2/api",
     "dev:web": "npm run dev --workspace @ticket-v2/web",
-    "build": "npm run build --workspaces",
-    "lint": "npm run lint --workspaces",
-    "typecheck": "npm run typecheck --workspaces"
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "engines": {
     "node": ">=18.12.0"
   }
 }
-

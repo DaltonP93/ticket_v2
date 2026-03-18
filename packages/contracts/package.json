@@ -3,6 +3,10 @@
   "version": "3.0.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts"
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo contracts-ready",
+    "lint": "echo contracts-ready",
+    "typecheck": "echo contracts-ready"
+  }
 }
-

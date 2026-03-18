@@ -58,9 +58,9 @@ CREATE DATABASE ticket_v2 OWNER ticket_v2;
 ## 3. Copiar el proyecto
 
 ```bash
-sudo mkdir -p /var/www/ticket-v2
-sudo chown -R $USER:$USER /var/www/ticket-v2
-cd /var/www/ticket-v2
+sudo mkdir -p /var/www/ticket_v2
+sudo chown -R $USER:$USER /var/www/ticket_v2
+cd /var/www/ticket_v2
 git clone <TU_REPO_O_COPIA> .
 ```
 
@@ -84,7 +84,7 @@ VITE_API_BASE_URL=https://tickets.midominio.com/api
 ## 5. Instalar dependencias
 
 ```bash
-cd /var/www/ticket-v2
+cd /var/www/ticket_v2
 npm install
 ```
 
@@ -99,15 +99,15 @@ El frontend compilado quedara en `apps/web/dist`.
 ## 7. Publicar frontend
 
 ```bash
-sudo mkdir -p /var/www/ticket-v2/web
-sudo rsync -av --delete /var/www/ticket-v2/apps/web/dist/ /var/www/ticket-v2/web/
-sudo chown -R www-data:www-data /var/www/ticket-v2/web
+sudo mkdir -p /var/www/ticket_v2/web
+sudo rsync -av --delete /var/www/ticket_v2/apps/web/dist/ /var/www/ticket_v2/web/
+sudo chown -R www-data:www-data /var/www/ticket_v2/web
 ```
 
 ## 8. Configurar systemd para la API
 
 ```bash
-sudo cp deploy/systemd/ticket-v2-api.service /etc/systemd/system/ticket-v2-api.service
+sudo cp deploy/systemd/ticket_v2-api.service /etc/systemd/system/ticket_v2-api.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now ticket-v2-api
 sudo systemctl status ticket-v2-api
@@ -124,8 +124,8 @@ journalctl -u ticket-v2-api -f
 Editar el archivo de ejemplo:
 
 ```bash
-sudo cp deploy/nginx/ticket-v2.conf /etc/nginx/sites-available/ticket-v2.conf
-sudo nano /etc/nginx/sites-available/ticket-v2.conf
+sudo cp deploy/nginx/ticket_v2.conf /etc/nginx/sites-available/ticket_v2.conf
+sudo nano /etc/nginx/sites-available/ticket_v2.conf
 ```
 
 Cambiar `tickets.midominio.com` por tu dominio o IP.
@@ -133,7 +133,7 @@ Cambiar `tickets.midominio.com` por tu dominio o IP.
 Activar el sitio:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/ticket-v2.conf /etc/nginx/sites-enabled/ticket-v2.conf
+sudo ln -s /etc/nginx/sites-available/ticket_v2.conf /etc/nginx/sites-enabled/ticket_v2.conf
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -210,7 +210,7 @@ Probar sitio:
 ### El frontend carga pero no actualiza
 
 - recompilar con `npm run build`
-- sincronizar de nuevo `apps/web/dist` a `/var/www/ticket-v2/web`
+- sincronizar de nuevo `apps/web/dist` a `/var/www/ticket_v2/web`
 - limpiar cache del navegador
 
 ### El audio no se escucha
@@ -225,7 +225,7 @@ Probar sitio:
 Tambien podes probar con:
 
 ```bash
-cd /var/www/ticket-v2/deploy
+cd /var/www/ticket_v2/deploy
 sudo docker compose -f docker-compose.prod.yml up -d --build
 ```
 
