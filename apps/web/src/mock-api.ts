@@ -1,4 +1,4 @@
-import type { AudioProfile, PanelProfile, ServiceCatalogItem, SupportedLocale, Ticket, TicketCall, TicketType } from "@ticket-v2/contracts";
+import type { AudioProfile, Department, PanelProfile, ServiceCatalogItem, SupportedLocale, Ticket, TicketCall, TicketType, Unit } from "@ticket-v2/contracts";
 
 export const stats = {
   ticketsToday: 248,
@@ -11,6 +11,17 @@ export const serviceItems: ServiceCatalogItem[] = [
   { id: "srv_caja", code: "CAJA", name: "Caja general", departmentId: "dep_cajas", allowPriority: true },
   { id: "srv_laboratorio", code: "LAB", name: "Laboratorio", departmentId: "dep_estudios", allowPriority: true },
   { id: "srv_consultas", code: "CON", name: "Consultas medicas", departmentId: "dep_consultas", allowPriority: false }
+];
+
+export const unitItems: Unit[] = [
+  { id: "unit_samap", code: "SAMAP", name: "Unidad Central", brandName: "SAMAP", locale: "es" },
+  { id: "unit_sucursal", code: "SAMAP-SUR", name: "Sucursal Sur", brandName: "SAMAP", locale: "es" }
+];
+
+export const departments: Department[] = [
+  { id: "dep_cajas", name: "Cajas" },
+  { id: "dep_estudios", name: "Estudios" },
+  { id: "dep_consultas", name: "Consultas" }
 ];
 
 export const ticketTypeItems: TicketType[] = [
@@ -103,6 +114,25 @@ export const connectors = [
   { id: "int_1", name: "HIS Connector", type: "REST outbound", status: "Online" },
   { id: "int_2", name: "CRM Webhook", type: "Webhook", status: "Online" },
   { id: "int_3", name: "Coverage Validator", type: "REST validation", status: "Sandbox" }
+];
+
+export const profileItems = [
+  { id: "pf_superadmin", name: "Superadmin", scope: "Global" },
+  { id: "pf_admin_unit", name: "Admin de unidad", scope: "Unidad" },
+  { id: "pf_triage", name: "Operador de triage", scope: "Operacion" },
+  { id: "pf_monitor", name: "Monitor de panel", scope: "Pantalla" }
+];
+
+export const adminUsers = [
+  { id: "usr_1", name: "Dalton Perez", email: "admin@saa.com.py", profile: "Superadmin" },
+  { id: "usr_2", name: "Ana Gomez", email: "triage@saa.com.py", profile: "Operador de triage" },
+  { id: "usr_3", name: "Luis Ferreira", email: "panel@saa.com.py", profile: "Monitor de panel" }
+];
+
+export const printTemplates = [
+  { id: "tpl_default", name: "Ticket institucional", scope: "Default", unit: "Unidad Central" },
+  { id: "tpl_lab", name: "Ticket laboratorio", scope: "Servicio", unit: "Unidad Central" },
+  { id: "tpl_priority", name: "Ticket preferencial", scope: "Tipo de ticket", unit: "Sucursal Sur" }
 ];
 
 export const audioProfiles: Record<SupportedLocale, AudioProfile> = {
