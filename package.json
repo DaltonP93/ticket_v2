@@ -1,0 +1,21 @@
+{
+  "name": "sistema-de-ticket-v2",
+  "private": true,
+  "version": "3.0.0",
+  "description": "Monorepo moderno para gestion de tickets, triage, paneles e integraciones empresariales.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @ticket-v2/api",
+    "dev:web": "npm run dev --workspace @ticket-v2/web",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "engines": {
+    "node": ">=18.12.0"
+  }
+}
+
