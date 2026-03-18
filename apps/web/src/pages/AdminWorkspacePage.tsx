@@ -343,7 +343,15 @@ export function AdminWorkspacePage({ locale, section }: AdminWorkspacePageProps)
                 <input
                   type="color"
                   value={panelProfile.theme.accent}
-                  onChange={(event) => updatePanelProfile({ theme: { accent: event.target.value } })}
+                  onChange={(event) =>
+                    updatePanelProfile({
+                      theme: {
+                        background: panelProfile.theme.background,
+                        accent: event.target.value,
+                        text: panelProfile.theme.text
+                      }
+                    })
+                  }
                 />
               </label>
               <label>
@@ -351,7 +359,15 @@ export function AdminWorkspacePage({ locale, section }: AdminWorkspacePageProps)
                 <input
                   type="color"
                   value={panelProfile.theme.background}
-                  onChange={(event) => updatePanelProfile({ theme: { background: event.target.value } })}
+                  onChange={(event) =>
+                    updatePanelProfile({
+                      theme: {
+                        background: event.target.value,
+                        accent: panelProfile.theme.accent,
+                        text: panelProfile.theme.text
+                      }
+                    })
+                  }
                 />
               </label>
               <label>
@@ -359,7 +375,15 @@ export function AdminWorkspacePage({ locale, section }: AdminWorkspacePageProps)
                 <input
                   type="color"
                   value={panelProfile.theme.text}
-                  onChange={(event) => updatePanelProfile({ theme: { text: event.target.value } })}
+                  onChange={(event) =>
+                    updatePanelProfile({
+                      theme: {
+                        background: panelProfile.theme.background,
+                        accent: panelProfile.theme.accent,
+                        text: event.target.value
+                      }
+                    })
+                  }
                 />
               </label>
             </div>
