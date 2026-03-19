@@ -1,13 +1,16 @@
 import type {
   AudioProfile,
   Department,
+  Desk,
+  Location,
   PanelProfile,
   ServiceCatalogItem,
   SupportedLocale,
   Ticket,
   TicketCall,
   TicketType,
-  Unit
+  Unit,
+  UnitSettings
 } from "@ticket-v2/contracts";
 
 export const units: Unit[] = [
@@ -16,7 +19,8 @@ export const units: Unit[] = [
     code: "SAMAP",
     name: "Unidad Local",
     brandName: "SAMAP",
-    locale: "es"
+    locale: "es",
+    logoUrl: "https://ticket.saa.com.py/logo-samap.png"
   }
 ];
 
@@ -27,9 +31,78 @@ export const departments: Department[] = [
 ];
 
 export const services: ServiceCatalogItem[] = [
-  { id: "srv_caja", code: "CAJA", name: "Caja general", departmentId: "dep_cajas", allowPriority: true },
-  { id: "srv_laboratorio", code: "LAB", name: "Laboratorio", departmentId: "dep_estudios", allowPriority: true },
-  { id: "srv_consultas", code: "CON", name: "Consultas medicas", departmentId: "dep_consultas", allowPriority: false }
+  {
+    id: "srv_caja",
+    code: "CAJA",
+    name: "Caja general",
+    departmentId: "dep_cajas",
+    allowPriority: true,
+    ticketTypeIds: ["tt_normal", "tt_priority"]
+  },
+  {
+    id: "srv_laboratorio",
+    code: "LAB",
+    name: "Laboratorio",
+    departmentId: "dep_estudios",
+    allowPriority: true,
+    ticketTypeIds: ["tt_normal", "tt_priority", "tt_schedule"]
+  },
+  {
+    id: "srv_consultas",
+    code: "CON",
+    name: "Consultas medicas",
+    departmentId: "dep_consultas",
+    allowPriority: false,
+    ticketTypeIds: ["tt_normal", "tt_schedule"]
+  }
+];
+
+export const locations: Location[] = [
+  {
+    id: "loc_caja_1",
+    unitId: "unit_samap",
+    code: "CAJA_1",
+    name: "Caja 1"
+  },
+  {
+    id: "loc_box_3",
+    unitId: "unit_samap",
+    code: "BOX_3",
+    name: "Box 3"
+  },
+  {
+    id: "loc_box_4",
+    unitId: "unit_samap",
+    code: "BOX_4",
+    name: "Box 4"
+  }
+];
+
+export const desks: Desk[] = [
+  {
+    id: "desk_caja_1",
+    unitId: "unit_samap",
+    locationId: "loc_caja_1",
+    name: "Caja 1",
+    operatorName: "Administrador General",
+    serviceIds: ["srv_caja"]
+  },
+  {
+    id: "desk_box3",
+    unitId: "unit_samap",
+    locationId: "loc_box_3",
+    name: "Box 3",
+    operatorName: "Laboratorio",
+    serviceIds: ["srv_laboratorio"]
+  },
+  {
+    id: "desk_box4",
+    unitId: "unit_samap",
+    locationId: "loc_box_4",
+    name: "Box 4",
+    operatorName: "Consultas",
+    serviceIds: ["srv_consultas", "srv_laboratorio"]
+  }
 ];
 
 export const ticketTypes: TicketType[] = [
@@ -98,6 +171,28 @@ export const panelProfiles: PanelProfile[] = [
   }
 ];
 
+export const unitSettings: UnitSettings[] = [
+  {
+    unitId: "unit_samap",
+    printHeader: "SAMAP Medicina Prepaga",
+    printFooter: "Presente su documento y aguarde el llamado en pantalla.",
+    printShowDate: true,
+    printShowTicketType: true,
+    printShowUnitName: true,
+    printShowServiceName: true,
+    triageServiceIds: ["srv_caja", "srv_laboratorio", "srv_consultas"],
+    panelShowHistory: true,
+    panelShowClock: true,
+    panelPrimaryMediaId: "media_001",
+    panelBrandingText: "Sistema de Ticket V2",
+    webhooks: {
+      preTicket: "",
+      postTicket: "",
+      onPrint: ""
+    }
+  }
+];
+
 export const tickets: Ticket[] = [
   {
     id: "tk_001",
@@ -108,6 +203,32 @@ export const tickets: Ticket[] = [
     ticketTypeId: "tt_normal",
     metadata: {},
     createdAt: new Date().toISOString()
+  },
+  {
+    id: "tk_002",
+    sequence: "P-032",
+    status: "in_service",
+    serviceId: "srv_laboratorio",
+    unitId: "unit_samap",
+    ticketTypeId: "tt_priority",
+    metadata: {
+      serviceName: "Laboratorio",
+      ticketTypeName: "Prioridad"
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString()
+  },
+  {
+    id: "tk_003",
+    sequence: "N-109",
+    status: "waiting",
+    serviceId: "srv_consultas",
+    unitId: "unit_samap",
+    ticketTypeId: "tt_normal",
+    metadata: {
+      serviceName: "Consultas medicas",
+      ticketTypeName: "Normal"
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString()
   }
 ];
 
@@ -147,11 +268,14 @@ export const audioProfiles: Record<SupportedLocale, AudioProfile> = {
 export const currentCalls: TicketCall[] = [
   {
     ticketId: "tk_002",
+    deskId: "desk_box3",
+    deskName: "Box 3",
     sequence: "P-032",
     counter: "Box 3",
     serviceName: "Laboratorio",
     ticketTypeName: "Prioridad",
     locale: "es",
-    announcementText: "Ticket P-032, dirigirse a Box 3, servicio Laboratorio."
+    announcementText: "Ticket P-032, dirigirse a Box 3, servicio Laboratorio.",
+    calledAt: new Date().toISOString()
   }
 ];

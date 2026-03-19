@@ -33,6 +33,8 @@ export class AudioService {
     ticketId: string;
     locale: SupportedLocale;
     counter: string;
+    deskId?: string;
+    deskName?: string;
   }): TicketCall {
     const ticket = tickets.find((item) => item.id === input.ticketId);
 
@@ -46,6 +48,8 @@ export class AudioService {
 
     const call: TicketCall = {
       ticketId: ticket.id,
+      deskId: input.deskId ?? `desk_${input.counter.toLowerCase().replace(/\s+/g, "_")}`,
+      deskName: input.deskName ?? input.counter,
       sequence: ticket.sequence,
       counter: input.counter,
       serviceName: service?.name ?? "Servicio",
@@ -55,7 +59,8 @@ export class AudioService {
         sequence: ticket.sequence,
         counter: input.counter,
         serviceName: service?.name ?? "Servicio"
-      })
+      }),
+      calledAt: new Date().toISOString()
     };
 
     ticket.status = "called";

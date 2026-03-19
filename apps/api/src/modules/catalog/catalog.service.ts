@@ -1,4 +1,4 @@
-import { departments, services, units } from "../../data/mock-db.js";
+import { departments, desks, locations, services, ticketTypes, units } from "../../data/mock-db.js";
 
 export class CatalogService {
   listUnits() {
@@ -12,5 +12,16 @@ export class CatalogService {
   listServices() {
     return services;
   }
-}
 
+  listTicketTypes() {
+    return ticketTypes;
+  }
+
+  listLocations(unitId?: string) {
+    return unitId ? locations.filter((item) => item.unitId === unitId) : locations;
+  }
+
+  listDesks(unitId?: string) {
+    return unitId ? desks.filter((item) => item.unitId === unitId) : desks;
+  }
+}

@@ -1,3 +1,5 @@
+import { panelProfiles, unitSettings, units } from "../../data/mock-db.js";
+
 export class SettingsService {
   getFeatureFlags() {
     return {
@@ -19,5 +21,16 @@ export class SettingsService {
       target: "salud, banca, retail, gobierno y corporativo",
       supportedLocales: ["es", "en", "pt"]
     };
+  }
+
+  listUnitSettings() {
+    return unitSettings.map((item) => ({
+      ...item,
+      unit: units.find((unit) => unit.id === item.unitId) ?? null
+    }));
+  }
+
+  getPanelProfiles() {
+    return panelProfiles;
   }
 }

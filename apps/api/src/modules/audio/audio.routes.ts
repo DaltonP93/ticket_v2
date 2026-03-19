@@ -12,7 +12,9 @@ const previewSchema = z.object({
 const callSchema = z.object({
   ticketId: z.string().min(1),
   locale: z.enum(["es", "en", "pt"]),
-  counter: z.string().min(1)
+  counter: z.string().min(1),
+  deskId: z.string().min(1).optional(),
+  deskName: z.string().min(1).optional()
 });
 
 export async function registerAudioRoutes(app: FastifyInstance) {

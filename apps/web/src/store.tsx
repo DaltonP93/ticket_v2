@@ -82,7 +82,7 @@ interface StoreShape {
   addUser: (input: Omit<AdminUser, "id">) => void;
   savePrintTemplate: (template: PrintTemplate) => void;
   addMediaAsset: (asset: { title: string; kind: string; url: string; durationSeconds: number }) => void;
-  updatePanelProfile: (patch: Partial<PanelProfile> & { theme?: Partial<PanelProfile["theme"]> }) => void;
+  updatePanelProfile: (patch: Partial<Omit<PanelProfile, "theme">> & { theme?: Partial<PanelProfile["theme"]> }) => void;
   updateUnitSettings: (unitId: string, patch: Partial<UnitSettings>) => void;
   emitTicket: (input: {
     locale: SupportedLocale;
@@ -250,7 +250,7 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
           mediaAssets: [...current.mediaAssets, { id: buildId("media"), ...asset }]
         }));
       },
-      updatePanelProfile(patch) {
+      updatePanelProfile(patch: Partial<Omit<PanelProfile, "theme">> & { theme?: Partial<PanelProfile["theme"]> }) {
         setState((current) => ({
           ...current,
           panelProfile: {
