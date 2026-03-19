@@ -7,6 +7,7 @@ export interface Unit {
   name: string;
   brandName: string;
   locale: SupportedLocale;
+  logoUrl?: string;
 }
 
 export interface Department {
@@ -20,6 +21,23 @@ export interface ServiceCatalogItem {
   name: string;
   departmentId: Identifier;
   allowPriority: boolean;
+  ticketTypeIds?: Identifier[];
+}
+
+export interface Location {
+  id: Identifier;
+  unitId: Identifier;
+  code: string;
+  name: string;
+}
+
+export interface Desk {
+  id: Identifier;
+  unitId: Identifier;
+  locationId: Identifier;
+  name: string;
+  operatorName: string;
+  serviceIds: Identifier[];
 }
 
 export interface TicketType {
@@ -53,6 +71,26 @@ export interface Ticket {
   createdAt: string;
 }
 
+export interface UnitSettings {
+  unitId: Identifier;
+  printHeader: string;
+  printFooter: string;
+  printShowDate: boolean;
+  printShowTicketType: boolean;
+  printShowUnitName: boolean;
+  printShowServiceName: boolean;
+  triageServiceIds: Identifier[];
+  panelShowHistory: boolean;
+  panelShowClock: boolean;
+  panelPrimaryMediaId?: Identifier;
+  panelBrandingText?: string;
+  webhooks: {
+    preTicket: string;
+    postTicket: string;
+    onPrint: string;
+  };
+}
+
 export interface PanelProfile {
   id: Identifier;
   name: string;
@@ -78,10 +116,13 @@ export interface AudioProfile {
 
 export interface TicketCall {
   ticketId: Identifier;
+  deskId: Identifier;
+  deskName: string;
   sequence: string;
   counter: string;
   serviceName: string;
   ticketTypeName: string;
   locale: SupportedLocale;
   announcementText: string;
+  calledAt: string;
 }

@@ -36,121 +36,157 @@ function printTicket(html: string) {
 }
 
 export function TriagePage({ locale }: TriagePageProps) {
-  const { audioProfiles, emitTicket, printTemplates, services, ticketTypes } = useTicketSystem();
-  const [selectedServiceId, setSelectedServiceId] = useState(services[0]?.id ?? "");
-  const [selectedTicketTypeId, setSelectedTicketTypeId] = useState(ticketTypes[0]?.id ?? "");
-  const [clientName, setClientName] = useState("Juan Perez");
-  const [documentNumber, setDocumentNumber] = useState("1234567");
-  const [observation, setObservation] = useState("");
-  const [sequence, setSequence] = useState("A-142");
-
-  const selectedService = services.find((item) => item.id === selectedServiceId) ?? services[0];
-  const selectedType = ticketTypes.find((item) => item.id === selectedTicketTypeId) ?? ticketTypes[0];
-  const audioProfile = audioProfiles[locale];
+  const { audioProfiles, emitTicket, printTemplates, recentTickets, selectedUnitId, services, ticketTypes, unitSettings, units } =
+    useTicketSystem();
+  const activeUnit = units.find((item) => item.id === selectedUnitId) ?? units[0];
+  const activeSettings = unitSettings.find((item) => item.unitId === selectedUnitId) ?? unitSettings[0];
   const activeTemplate = printTemplates[0];
+  const availableServices = services.filter((item) => activeSettings?.triageServiceIds.includes(item.id));
+  const [selectedServiceId, setSelectedServiceId] = useState(availableServices[0]?.id ?? services[0]?.id ?? "");
+  const [clientName, setClientName] = useState("");
+  const [documentNumber, setDocumentNumber] = useState("");
+  const [observation, setObservation] = useState("");
+  const [lastSequence, setLastSequence] = useState(recentTickets[0]?.sequence ?? "C-001");
+
+  const selectedService = availableServices.find((item) => item.id === selectedServiceId) ?? services[0];
+  const allowedTypes = ticketTypes.filter((item) =>
+    selectedService?.ticketTypeIds?.length ? selectedService.ticketTypeIds.includes(item.id) : true
+  );
+  const selectedType = allowedTypes[0] ?? ticketTypes[0];
+  const audioProfile = audioProfiles[locale];
 
   const previewText = useMemo(
     () =>
       audioProfile.template
-        .replace(/\{sequence\}/g, sequence)
+        .replace(/\{sequence\}/g, lastSequence)
         .replace(/\{counter\}/g, locale === "en" ? "Counter 2" : locale === "pt" ? "Guiche 2" : "Box 2")
-        .replace(/\{serviceName\}/g, selectedService?.name ?? "Laboratorio"),
-    [audioProfile, locale, selectedService, sequence]
+        .replace(/\{serviceName\}/g, selectedService?.name ?? "Servicio"),
+    [audioProfile, lastSequence, locale, selectedService]
   );
 
-  const printHtml = useMemo(
-    () => `
+  const printHtml = useMemo(() => {
+    const showDate = activeSettings?.printShowDate ?? true;
+    const showType = activeSettings?.printShowTicketType ?? true;
+    const showUnit = activeSettings?.printShowUnitName ?? true;
+    const showService = activeSettings?.printShowServiceName ?? true;
+    const dateLabel = new Intl.DateTimeFormat(locale === "en" ? "en-US" : locale === "pt" ? "pt-BR" : "es-PY", {
+      dateStyle: "short",
+      timeStyle: "short"
+    }).format(new Date());
+
+    return `
       <div class="ticket">
-        <div class="brand">SAMAP</div>
-        <h1>${sequence}</h1>
+        <div class="brand">${activeSettings?.printHeader ?? activeTemplate?.header ?? activeUnit?.brandName ?? "SAMAP"}</div>
+        <h1>${lastSequence}</h1>
         <div class="meta">
-          <div>${translate(locale, "service")}: ${selectedService?.name ?? "-"}</div>
-          <div>Tipo: ${selectedType?.name ?? "-"}</div>
-          <div>${translate(locale, "clientName")}: ${clientName || "-"}</div>
-          <div>${translate(locale, "document")}: ${documentNumber || "-"}</div>
-          <div>Hora: ${new Intl.DateTimeFormat(locale === "en" ? "en-US" : locale === "pt" ? "pt-BR" : "es-PY", {
-            hour: "2-digit",
-            minute: "2-digit"
-          }).format(new Date())}</div>
+          ${showUnit ? `<div>Unidad: ${activeUnit?.name ?? "-"}</div>` : ""}
+          ${showService ? `<div>${translate(locale, "service")}: ${selectedService?.name ?? "-"}</div>` : ""}
+          ${showType ? `<div>Tipo: ${selectedType?.name ?? "-"}</div>` : ""}
+          ${clientName ? `<div>${translate(locale, "clientName")}: ${clientName}</div>` : ""}
+          ${documentNumber ? `<div>${translate(locale, "document")}: ${documentNumber}</div>` : ""}
+          ${showDate ? `<div>${dateLabel}</div>` : ""}
         </div>
-        <p class="note">${observation || translate(locale, "receiptInstruction")}</p>
+        <p class="note">${observation || activeSettings?.printFooter || translate(locale, "receiptInstruction")}</p>
       </div>
-    `,
-    [clientName, documentNumber, locale, observation, selectedService, selectedType, sequence]
-  );
+    `;
+  }, [
+    activeSettings,
+    activeTemplate,
+    activeUnit,
+    clientName,
+    documentNumber,
+    lastSequence,
+    locale,
+    observation,
+    selectedService,
+    selectedType
+  ]);
 
-  function handleEmitAndPrint() {
+  function handleEmit(ticketTypeId: string) {
     const ticket = emitTicket({
       locale,
       serviceId: selectedServiceId,
-      ticketTypeId: selectedTicketTypeId,
+      ticketTypeId,
       clientName,
       clientDocument: documentNumber,
       observation
     });
-    setSequence(ticket.sequence);
-    const rendered = printHtml
-      .replace(sequence, ticket.sequence)
-      .replace("SAMAP", activeTemplate?.header || "SAMAP");
-    printTicket(rendered);
+
+    setLastSequence(ticket.sequence);
+
+    const ticketType = ticketTypes.find((item) => item.id === ticketTypeId);
+    const html = printHtml
+      .replace(lastSequence, ticket.sequence)
+      .replace(`Tipo: ${selectedType?.name ?? "-"}`, `Tipo: ${ticketType?.name ?? selectedType?.name ?? "-"}`);
+
+    printTicket(html);
   }
 
   return (
     <section className="page-grid">
-      <div className="two-column-layout">
+      <div className="triage-kiosk-layout">
         <article className="panel-card">
           <div className="card-header">
-            <h3>{translate(locale, "issueTicket")}</h3>
-            <span>{translate(locale, "guidedFlow")}</span>
+            <div>
+              <h3>{translate(locale, "issueTicket")}</h3>
+              <span>{translate(locale, "serviceStepHelp")}</span>
+            </div>
+            <span className="status-pill">{activeUnit?.name}</span>
           </div>
 
-          <div className="form-grid">
-            <label>
-              {translate(locale, "service")}
-              <select value={selectedServiceId} onChange={(event) => setSelectedServiceId(event.target.value)}>
-                {services.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="kiosk-step">
+            <h4>{translate(locale, "kioskSelectService")}</h4>
+            <div className="service-kiosk-grid">
+              {availableServices.map((item) => (
+                <button
+                  key={item.id}
+                  className={selectedServiceId === item.id ? "kiosk-service-button active" : "kiosk-service-button"}
+                  onClick={() => setSelectedServiceId(item.id)}
+                  type="button"
+                >
+                  <strong>{item.name}</strong>
+                  <span>{item.code}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
+          <div className="kiosk-step">
+            <h4>{translate(locale, "chooseTicketType")}</h4>
+            <p className="subtitle compact">{translate(locale, "directPrint")}</p>
+            <div className="ticket-type-grid compact">
+              {allowedTypes.map((item) => (
+                <button
+                  key={item.id}
+                  className="ticket-emit-button"
+                  onClick={() => handleEmit(item.id)}
+                  style={{ background: item.color, color: item.textColor }}
+                  type="button"
+                >
+                  <strong>{item.name}</strong>
+                  <span>{item.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="template-editor compact-grid">
+            <div className="card-header">
+              <h3>{translate(locale, "optionalData")}</h3>
+              <span>{translate(locale, "selectedService")}: {selectedService?.name}</span>
+            </div>
             <label>
               {translate(locale, "clientName")}
               <input value={clientName} onChange={(event) => setClientName(event.target.value)} />
             </label>
-
             <label>
               {translate(locale, "document")}
               <input value={documentNumber} onChange={(event) => setDocumentNumber(event.target.value)} />
             </label>
-
             <label>
               {translate(locale, "triageObservation")}
-              <textarea rows={4} value={observation} onChange={(event) => setObservation(event.target.value)} />
+              <textarea rows={3} value={observation} onChange={(event) => setObservation(event.target.value)} />
             </label>
-          </div>
-
-          <div className="ticket-type-grid compact">
-            {ticketTypes.map((item) => (
-              <button
-                key={item.id}
-                className={selectedTicketTypeId === item.id ? "ticket-emit-button active" : "ticket-emit-button"}
-                onClick={() => setSelectedTicketTypeId(item.id)}
-                style={{ background: item.color, color: item.textColor }}
-                type="button"
-              >
-                <strong>{item.name}</strong>
-                <span>{item.prefix}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="button-row">
-            <button className="primary-button" onClick={handleEmitAndPrint} type="button">
-              {translate(locale, "emitAndPrint")}
-            </button>
             <button className="secondary-button" onClick={() => speakAnnouncement(previewText, audioProfile)} type="button">
               {translate(locale, "playAnnouncement")}
             </button>
@@ -164,20 +200,26 @@ export function TriagePage({ locale }: TriagePageProps) {
           </div>
 
           <div className="receipt">
-            <div className="receipt-brand">SAMAP</div>
-            <div className="receipt-number">{sequence}</div>
+            <div className="receipt-brand">{activeSettings?.printHeader ?? activeTemplate?.header ?? activeUnit?.brandName}</div>
+            <div className="receipt-number">{lastSequence}</div>
             <div className="receipt-details">
-              <span>{translate(locale, "service")}: {selectedService?.name}</span>
-              <span>Tipo: {selectedType?.name}</span>
-              <span>{translate(locale, "clientName")}: {clientName}</span>
-              <span>{translate(locale, "document")}: {documentNumber}</span>
+              {(activeSettings?.printShowUnitName ?? true) ? <span>Unidad: {activeUnit?.name}</span> : null}
+              {(activeSettings?.printShowServiceName ?? true) ? <span>{translate(locale, "service")}: {selectedService?.name}</span> : null}
+              {(activeSettings?.printShowTicketType ?? true) ? <span>Tipo: {selectedType?.name}</span> : null}
+              {clientName ? <span>{translate(locale, "clientName")}: {clientName}</span> : null}
+              {documentNumber ? <span>{translate(locale, "document")}: {documentNumber}</span> : null}
             </div>
-            <p className="receipt-note">{observation || translate(locale, "receiptInstruction")}</p>
+            <p className="receipt-note">{observation || activeSettings?.printFooter || translate(locale, "receiptInstruction")}</p>
           </div>
 
           <div className="announcement-box">
-            <span>{translate(locale, "callPreview")}</span>
+            <span>{translate(locale, "highlightedCall")}</span>
             <strong>{previewText}</strong>
+          </div>
+
+          <div className="triage-last-issued">
+            <span>Ultimo ticket emitido</span>
+            <strong>{recentTickets[0]?.sequence ?? lastSequence}</strong>
           </div>
         </article>
       </div>

@@ -1,13 +1,16 @@
 import type {
   AudioProfile,
   Department,
+  Desk,
+  Location,
   PanelProfile,
   ServiceCatalogItem,
   SupportedLocale,
   Ticket,
   TicketCall,
   TicketType,
-  Unit
+  Unit,
+  UnitSettings
 } from "@ticket-v2/contracts";
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import {
@@ -16,13 +19,17 @@ import {
   connectors,
   currentCalls as defaultCurrentCalls,
   departments as defaultDepartments,
+  deskItems as defaultDeskItems,
+  locationItems as defaultLocationItems,
+  mediaAssets as defaultMediaAssets,
   panelProfile as defaultPanelProfile,
   printTemplates as defaultPrintTemplates,
   profileItems as defaultProfileItems,
   recentTickets as defaultRecentTickets,
   serviceItems as defaultServiceItems,
   ticketTypeItems as defaultTicketTypes,
-  unitItems as defaultUnitItems
+  unitItems as defaultUnitItems,
+  unitSettingsItems as defaultUnitSettingsItems
 } from "./mock-api";
 
 interface AdminUser {
@@ -49,24 +56,34 @@ interface PrintTemplate {
 }
 
 interface StoreShape {
+  selectedUnitId: string;
   units: Unit[];
   departments: Department[];
   services: ServiceCatalogItem[];
+  locations: Location[];
+  desks: Desk[];
   ticketTypes: TicketType[];
   profiles: ProfileItem[];
   users: AdminUser[];
   printTemplates: PrintTemplate[];
+  unitSettings: UnitSettings[];
   panelProfile: PanelProfile;
   recentTickets: Ticket[];
   currentCalls: TicketCall[];
   audioProfiles: Record<SupportedLocale, AudioProfile>;
   connectors: typeof connectors;
-  addUnit: (input: Pick<Unit, "name" | "code" | "brandName" | "locale">) => void;
+  mediaAssets: { id: string; title: string; kind: string; url: string; durationSeconds: number }[];
+  setSelectedUnit: (unitId: string) => void;
+  addUnit: (input: Pick<Unit, "name" | "code" | "brandName" | "locale" | "logoUrl">) => void;
   addDepartment: (name: string) => void;
-  addService: (input: Pick<ServiceCatalogItem, "name" | "code" | "departmentId" | "allowPriority">) => void;
+  addService: (input: Pick<ServiceCatalogItem, "name" | "code" | "departmentId" | "allowPriority" | "ticketTypeIds">) => void;
+  addLocation: (input: Pick<Location, "name" | "code" | "unitId">) => void;
+  addDesk: (input: Pick<Desk, "name" | "unitId" | "locationId" | "operatorName" | "serviceIds">) => void;
   addUser: (input: Omit<AdminUser, "id">) => void;
   savePrintTemplate: (template: PrintTemplate) => void;
-  updatePanelProfile: (patch: Partial<PanelProfile>) => void;
+  addMediaAsset: (asset: { title: string; kind: string; url: string; durationSeconds: number }) => void;
+  updatePanelProfile: (patch: Partial<PanelProfile> & { theme?: Partial<PanelProfile["theme"]> }) => void;
+  updateUnitSettings: (unitId: string, patch: Partial<UnitSettings>) => void;
   emitTicket: (input: {
     locale: SupportedLocale;
     serviceId: string;
@@ -75,48 +92,64 @@ interface StoreShape {
     clientDocument: string;
     observation: string;
   }) => Ticket;
-  callNextTicket: (locale: SupportedLocale) => TicketCall | undefined;
+  callNextTicket: (input: { locale: SupportedLocale; deskId: string }) => TicketCall | undefined;
+  finishTicket: (ticketId: string) => void;
 }
 
 interface PersistedState {
+  selectedUnitId: string;
   units: Unit[];
   departments: Department[];
   services: ServiceCatalogItem[];
+  locations: Location[];
+  desks: Desk[];
   ticketTypes: TicketType[];
   profiles: ProfileItem[];
   users: AdminUser[];
   printTemplates: PrintTemplate[];
+  unitSettings: UnitSettings[];
   panelProfile: PanelProfile;
   recentTickets: Ticket[];
   currentCalls: TicketCall[];
   audioProfiles: Record<SupportedLocale, AudioProfile>;
+  mediaAssets: { id: string; title: string; kind: string; url: string; durationSeconds: number }[];
 }
 
 const STORAGE_KEY = "ticket-v2-store";
 
 const initialState: PersistedState = {
+  selectedUnitId: defaultUnitItems[0]?.id ?? "",
   units: defaultUnitItems,
   departments: defaultDepartments,
   services: defaultServiceItems,
+  locations: defaultLocationItems,
+  desks: defaultDeskItems,
   ticketTypes: defaultTicketTypes,
   profiles: defaultProfileItems,
   users: defaultAdminUsers,
-  printTemplates: defaultPrintTemplates.map((item) => ({
-    ...item,
-    header: "SAMAP - Medicina Prepaga",
-    footer: "Presente su documento y aguarde el llamado en pantalla.",
-    html: `<div class="ticket">\n  <h1>{{ticket.sequence}}</h1>\n  <p>{{service.name}}</p>\n  <p>{{client.name}}</p>\n</div>`
-  })),
+  printTemplates: defaultPrintTemplates,
+  unitSettings: defaultUnitSettingsItems,
   panelProfile: defaultPanelProfile,
   recentTickets: defaultRecentTickets,
   currentCalls: defaultCurrentCalls,
-  audioProfiles: defaultAudioProfiles
+  audioProfiles: defaultAudioProfiles,
+  mediaAssets: defaultMediaAssets
 };
 
 const TicketSystemContext = createContext<StoreShape | null>(null);
 
 function buildId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function nextSequence(tickets: Ticket[], prefix: string) {
+  const lastNumber = tickets
+    .filter((item) => item.sequence.startsWith(`${prefix}-`))
+    .map((item) => Number.parseInt(item.sequence.split("-")[1] ?? "0", 10))
+    .filter((item) => Number.isFinite(item))
+    .sort((left, right) => right - left)[0] ?? 0;
+
+  return `${prefix}-${String(lastNumber + 1).padStart(3, "0")}`;
 }
 
 export function TicketSystemProvider({ children }: { children: ReactNode }) {
@@ -137,10 +170,37 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       connectors,
+      setSelectedUnit(unitId) {
+        setState((current) => ({ ...current, selectedUnitId: unitId }));
+      },
       addUnit(input) {
+        const newUnitId = buildId("unit");
         setState((current) => ({
           ...current,
-          units: [...current.units, { id: buildId("unit"), ...input }]
+          selectedUnitId: newUnitId,
+          units: [...current.units, { id: newUnitId, ...input }],
+          unitSettings: [
+            ...current.unitSettings,
+            {
+              unitId: newUnitId,
+              printHeader: input.brandName,
+              printFooter: "Presente su documento y aguarde el llamado en pantalla.",
+              printShowDate: true,
+              printShowTicketType: true,
+              printShowUnitName: true,
+              printShowServiceName: true,
+              triageServiceIds: current.services.slice(0, 3).map((service) => service.id),
+              panelShowHistory: true,
+              panelShowClock: true,
+              panelPrimaryMediaId: current.mediaAssets[0]?.id,
+              panelBrandingText: input.brandName,
+              webhooks: {
+                preTicket: "",
+                postTicket: "",
+                onPrint: ""
+              }
+            }
+          ]
         }));
       },
       addDepartment(name) {
@@ -153,6 +213,18 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
         setState((current) => ({
           ...current,
           services: [...current.services, { id: buildId("srv"), ...input }]
+        }));
+      },
+      addLocation(input) {
+        setState((current) => ({
+          ...current,
+          locations: [...current.locations, { id: buildId("loc"), ...input }]
+        }));
+      },
+      addDesk(input) {
+        setState((current) => ({
+          ...current,
+          desks: [...current.desks, { id: buildId("desk"), ...input }]
         }));
       },
       addUser(input) {
@@ -172,6 +244,12 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
           };
         });
       },
+      addMediaAsset(asset) {
+        setState((current) => ({
+          ...current,
+          mediaAssets: [...current.mediaAssets, { id: buildId("media"), ...asset }]
+        }));
+      },
       updatePanelProfile(patch) {
         setState((current) => ({
           ...current,
@@ -185,69 +263,132 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
           }
         }));
       },
-      emitTicket(input) {
-        const service = state.services.find((item) => item.id === input.serviceId);
-        const ticketType = state.ticketTypes.find((item) => item.id === input.ticketTypeId);
-        const prefix = ticketType?.prefix ?? "T";
-        const number = Math.floor(Math.random() * 900 + 100);
-        const ticket: Ticket = {
-          id: buildId("tk"),
-          sequence: `${prefix}-${number}`,
-          status: "waiting",
-          serviceId: input.serviceId,
-          unitId: state.units[0]?.id ?? "unit_default",
-          ticketTypeId: input.ticketTypeId,
-          clientName: input.clientName,
-          clientDocument: input.clientDocument,
-          metadata: {
-            observation: input.observation,
-            serviceName: service?.name ?? "",
-            ticketTypeName: ticketType?.name ?? ""
-          },
-          createdAt: new Date().toISOString()
-        };
-
+      updateUnitSettings(unitId, patch) {
         setState((current) => ({
           ...current,
-          recentTickets: [ticket, ...current.recentTickets].slice(0, 30)
+          unitSettings: current.unitSettings.map((item) =>
+            item.unitId === unitId
+              ? {
+                  ...item,
+                  ...patch,
+                  webhooks: {
+                    ...item.webhooks,
+                    ...(patch.webhooks ?? {})
+                  }
+                }
+              : item
+          )
         }));
-
-        return ticket;
       },
-      callNextTicket(locale) {
-        const waitingTicket = state.recentTickets.find((item) => item.status === "waiting");
-        if (!waitingTicket) {
-          return undefined;
-        }
+      emitTicket(input) {
+        let createdTicket: Ticket | undefined;
 
-        const service = state.services.find((item) => item.id === waitingTicket.serviceId);
-        const ticketType = state.ticketTypes.find((item) => item.id === waitingTicket.ticketTypeId);
-        const counter = locale === "en" ? "Counter 4" : locale === "pt" ? "Guiche 4" : "Box 4";
-        const profile = state.audioProfiles[locale];
-        const text = profile.template
-          .replace(/\{sequence\}/g, waitingTicket.sequence)
-          .replace(/\{counter\}/g, counter)
-          .replace(/\{serviceName\}/g, service?.name ?? "Servicio");
+        setState((current) => {
+          const service = current.services.find((item) => item.id === input.serviceId);
+          const ticketType = current.ticketTypes.find((item) => item.id === input.ticketTypeId);
+          const unit = current.units.find((item) => item.id === current.selectedUnitId) ?? current.units[0];
+          const prefix = ticketType?.prefix ?? service?.code.slice(0, 1) ?? "T";
+          const sequence = nextSequence(current.recentTickets, prefix);
 
-        const call: TicketCall = {
-          ticketId: waitingTicket.id,
-          sequence: waitingTicket.sequence,
-          counter,
-          serviceName: service?.name ?? "Servicio",
-          ticketTypeName: ticketType?.name ?? "Ticket",
-          locale,
-          announcementText: text
-        };
+          createdTicket = {
+            id: buildId("tk"),
+            sequence,
+            status: "waiting",
+            serviceId: input.serviceId,
+            unitId: unit?.id ?? current.selectedUnitId,
+            ticketTypeId: input.ticketTypeId,
+            clientName: input.clientName,
+            clientDocument: input.clientDocument,
+            metadata: {
+              observation: input.observation,
+              serviceName: service?.name ?? "",
+              ticketTypeName: ticketType?.name ?? "",
+              unitName: unit?.name ?? "",
+              createdLocale: input.locale
+            },
+            createdAt: new Date().toISOString()
+          };
 
+          return {
+            ...current,
+            recentTickets: [createdTicket, ...current.recentTickets].slice(0, 40)
+          };
+        });
+
+        return createdTicket!;
+      },
+      callNextTicket(input) {
+        let nextCall: TicketCall | undefined;
+
+        setState((current) => {
+          const desk = current.desks.find((item) => item.id === input.deskId);
+          if (!desk) {
+            return current;
+          }
+
+          const activeTicket = current.currentCalls.find((call) => {
+            if (call.deskId !== desk.id) {
+              return false;
+            }
+
+            const ticket = current.recentTickets.find((item) => item.id === call.ticketId);
+            return ticket?.status === "in_service";
+          });
+
+          if (activeTicket) {
+            nextCall = activeTicket;
+            return current;
+          }
+
+          const waitingTicket = current.recentTickets
+            .filter((item) => item.status === "waiting" && desk.serviceIds.includes(item.serviceId))
+            .sort((left, right) => left.createdAt.localeCompare(right.createdAt))[0];
+
+          if (!waitingTicket) {
+            return current;
+          }
+
+          const service = current.services.find((item) => item.id === waitingTicket.serviceId);
+          const ticketType = current.ticketTypes.find((item) => item.id === waitingTicket.ticketTypeId);
+          const location = current.locations.find((item) => item.id === desk.locationId);
+          const counter = location?.name ?? desk.name;
+          const profile = current.audioProfiles[input.locale];
+          const announcementText = profile.template
+            .replace(/\{sequence\}/g, waitingTicket.sequence)
+            .replace(/\{counter\}/g, counter)
+            .replace(/\{serviceName\}/g, service?.name ?? "Servicio");
+
+          nextCall = {
+            ticketId: waitingTicket.id,
+            deskId: desk.id,
+            deskName: desk.name,
+            sequence: waitingTicket.sequence,
+            counter,
+            serviceName: service?.name ?? "Servicio",
+            ticketTypeName: ticketType?.name ?? "Ticket",
+            locale: input.locale,
+            announcementText,
+            calledAt: new Date().toISOString()
+          };
+
+          return {
+            ...current,
+            recentTickets: current.recentTickets.map((item) =>
+              item.id === waitingTicket.id ? { ...item, status: "in_service" } : item
+            ),
+            currentCalls: [nextCall, ...current.currentCalls].slice(0, 16)
+          };
+        });
+
+        return nextCall;
+      },
+      finishTicket(ticketId) {
         setState((current) => ({
           ...current,
           recentTickets: current.recentTickets.map((item) =>
-            item.id === waitingTicket.id ? { ...item, status: "called" } : item
-          ),
-          currentCalls: [call, ...current.currentCalls].slice(0, 12)
+            item.id === ticketId ? { ...item, status: "finished" } : item
+          )
         }));
-
-        return call;
       }
     }),
     [state]

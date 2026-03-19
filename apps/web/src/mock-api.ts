@@ -1,4 +1,17 @@
-import type { AudioProfile, Department, PanelProfile, ServiceCatalogItem, SupportedLocale, Ticket, TicketCall, TicketType, Unit } from "@ticket-v2/contracts";
+import type {
+  AudioProfile,
+  Department,
+  Desk,
+  Location,
+  PanelProfile,
+  ServiceCatalogItem,
+  SupportedLocale,
+  Ticket,
+  TicketCall,
+  TicketType,
+  Unit,
+  UnitSettings
+} from "@ticket-v2/contracts";
 
 export const stats = {
   ticketsToday: 248,
@@ -7,21 +20,29 @@ export const stats = {
   integrationsOnline: 6
 };
 
-export const serviceItems: ServiceCatalogItem[] = [
-  { id: "srv_caja", code: "CAJA", name: "Caja general", departmentId: "dep_cajas", allowPriority: true },
-  { id: "srv_laboratorio", code: "LAB", name: "Laboratorio", departmentId: "dep_estudios", allowPriority: true },
-  { id: "srv_consultas", code: "CON", name: "Consultas medicas", departmentId: "dep_consultas", allowPriority: false }
-];
-
 export const unitItems: Unit[] = [
-  { id: "unit_samap", code: "SAMAP", name: "Unidad Central", brandName: "SAMAP", locale: "es" },
-  { id: "unit_sucursal", code: "SAMAP-SUR", name: "Sucursal Sur", brandName: "SAMAP", locale: "es" }
+  {
+    id: "unit_samap",
+    code: "SAMAP",
+    name: "Nueva Torre",
+    brandName: "SAMAP",
+    locale: "es",
+    logoUrl: "https://placehold.co/240x90?text=SAMAP"
+  },
+  {
+    id: "unit_laboratorio",
+    code: "LAB",
+    name: "Laboratorio",
+    brandName: "SAMAP",
+    locale: "es",
+    logoUrl: "https://placehold.co/240x90?text=SAMAP+LAB"
+  }
 ];
 
 export const departments: Department[] = [
-  { id: "dep_cajas", name: "Cajas" },
+  { id: "dep_recepcion", name: "Recepcion" },
   { id: "dep_estudios", name: "Estudios" },
-  { id: "dep_consultas", name: "Consultas" }
+  { id: "dep_caja", name: "Caja" }
 ];
 
 export const ticketTypeItems: TicketType[] = [
@@ -29,11 +50,10 @@ export const ticketTypeItems: TicketType[] = [
     id: "tt_normal",
     code: "NORMAL",
     name: "Normal",
-    description: "Atencion estandar",
-    prefix: "N",
-    color: "#173b6c",
+    description: "Atencion convencional",
+    prefix: "C",
+    color: "#1f57b8",
     textColor: "#ffffff",
-    icon: "ticket",
     baseWeight: 0,
     requireClient: false,
     requireDocument: false,
@@ -45,11 +65,10 @@ export const ticketTypeItems: TicketType[] = [
     id: "tt_priority",
     code: "PRIORITY",
     name: "Prioridad",
-    description: "Atencion preferente",
+    description: "Atencion preferencial",
     prefix: "P",
-    color: "#b42318",
+    color: "#cf3a11",
     textColor: "#ffffff",
-    icon: "shield",
     baseWeight: 10,
     requireClient: false,
     requireDocument: false,
@@ -63,9 +82,8 @@ export const ticketTypeItems: TicketType[] = [
     name: "Agendado",
     description: "Turno con cita previa",
     prefix: "A",
-    color: "#147d64",
+    color: "#0e8c74",
     textColor: "#ffffff",
-    icon: "calendar",
     baseWeight: 5,
     requireClient: true,
     requireDocument: true,
@@ -75,38 +93,230 @@ export const ticketTypeItems: TicketType[] = [
   }
 ];
 
+export const serviceItems: ServiceCatalogItem[] = [
+  {
+    id: "srv_con_turno",
+    code: "CON",
+    name: "Con Turno",
+    departmentId: "dep_recepcion",
+    allowPriority: true,
+    ticketTypeIds: ["tt_normal", "tt_priority"]
+  },
+  {
+    id: "srv_samap_turno",
+    code: "SAM",
+    name: "SAMAP con Turno",
+    departmentId: "dep_recepcion",
+    allowPriority: true,
+    ticketTypeIds: ["tt_normal", "tt_priority", "tt_schedule"]
+  },
+  {
+    id: "srv_sin_turno",
+    code: "SIN",
+    name: "Sin turno",
+    departmentId: "dep_recepcion",
+    allowPriority: false,
+    ticketTypeIds: ["tt_normal"]
+  },
+  {
+    id: "srv_laboratorio",
+    code: "LAB",
+    name: "Laboratorio",
+    departmentId: "dep_estudios",
+    allowPriority: true,
+    ticketTypeIds: ["tt_normal", "tt_priority"]
+  }
+];
+
+export const locationItems: Location[] = [
+  { id: "loc_box_1", unitId: "unit_samap", code: "BOX1", name: "Ventanilla 01" },
+  { id: "loc_box_2", unitId: "unit_samap", code: "BOX2", name: "Ventanilla 02" },
+  { id: "loc_box_3", unitId: "unit_samap", code: "BOX3", name: "Ventanilla 03" },
+  { id: "loc_lab_1", unitId: "unit_laboratorio", code: "LAB1", name: "Box Laboratorio" }
+];
+
+export const deskItems: Desk[] = [
+  {
+    id: "desk_admin",
+    unitId: "unit_samap",
+    locationId: "loc_box_1",
+    name: "Box 1",
+    operatorName: "Administrador General",
+    serviceIds: ["srv_con_turno", "srv_sin_turno"]
+  },
+  {
+    id: "desk_andrea",
+    unitId: "unit_samap",
+    locationId: "loc_box_2",
+    name: "Box 2",
+    operatorName: "Andrea Planas",
+    serviceIds: ["srv_samap_turno"]
+  },
+  {
+    id: "desk_lab",
+    unitId: "unit_laboratorio",
+    locationId: "loc_lab_1",
+    name: "Box 3",
+    operatorName: "Luis Ferreira",
+    serviceIds: ["srv_laboratorio"]
+  }
+];
+
+export const unitSettingsItems: UnitSettings[] = [
+  {
+    unitId: "unit_samap",
+    printHeader: "Sistema de Ticket Sanatorio Adventista",
+    printFooter: "Presente su documento y aguarde el llamado en pantalla.",
+    printShowDate: true,
+    printShowTicketType: true,
+    printShowUnitName: true,
+    printShowServiceName: true,
+    triageServiceIds: ["srv_con_turno", "srv_samap_turno", "srv_sin_turno"],
+    panelShowHistory: true,
+    panelShowClock: true,
+    panelPrimaryMediaId: "media_001",
+    panelBrandingText: "Con turno",
+    webhooks: {
+      preTicket: "",
+      postTicket: "",
+      onPrint: ""
+    }
+  },
+  {
+    unitId: "unit_laboratorio",
+    printHeader: "Ticket Laboratorio",
+    printFooter: "Dirijase al box asignado para la toma de muestra.",
+    printShowDate: true,
+    printShowTicketType: true,
+    printShowUnitName: true,
+    printShowServiceName: true,
+    triageServiceIds: ["srv_laboratorio"],
+    panelShowHistory: true,
+    panelShowClock: true,
+    panelPrimaryMediaId: "media_002",
+    panelBrandingText: "Panel institucional",
+    webhooks: {
+      preTicket: "",
+      postTicket: "",
+      onPrint: ""
+    }
+  }
+];
+
 export const panelProfile: PanelProfile = {
   id: "pp_default",
   name: "Panel institucional",
   layout: "calls-media",
   locale: "es",
   theme: {
-    background: "#07111f",
-    accent: "#35b7ff",
-    text: "#eef7ff"
+    background: "#0b3f97",
+    accent: "#1f66ff",
+    text: "#ffffff"
   }
 };
+
+export const printTemplates = [
+  {
+    id: "tpl_default",
+    name: "Ticket institucional",
+    scope: "Unidad",
+    unit: "Nueva Torre",
+    header: "Sistema de Ticket Sanatorio Adventista",
+    footer: "Presente su documento y aguarde el llamado en pantalla.",
+    html: "<div class=\"ticket\"><h1>{{ticket.sequence}}</h1></div>"
+  },
+  {
+    id: "tpl_lab",
+    name: "Ticket laboratorio",
+    scope: "Servicio",
+    unit: "Laboratorio",
+    header: "Ticket Laboratorio",
+    footer: "Dirijase al box asignado para la toma de muestra.",
+    html: "<div class=\"ticket\"><h1>{{ticket.sequence}}</h1></div>"
+  }
+];
+
+export const mediaAssets = [
+  {
+    id: "media_001",
+    title: "Video institucional principal",
+    kind: "video",
+    url: "https://www.w3schools.com/html/mov_bbb.mp4",
+    durationSeconds: 20
+  },
+  {
+    id: "media_002",
+    title: "Chequeo preventivo",
+    kind: "image",
+    url: "https://placehold.co/1200x675?text=Chequeo+preventivo",
+    durationSeconds: 12
+  },
+  {
+    id: "media_003",
+    title: "Promocion laboratorio",
+    kind: "image",
+    url: "https://placehold.co/1200x675?text=Promocion+Laboratorio",
+    durationSeconds: 12
+  }
+];
 
 export const recentTickets: Ticket[] = [
   {
     id: "tk_001",
-    sequence: "N-148",
+    sequence: "C-739",
     status: "waiting",
-    serviceId: "srv_caja",
+    serviceId: "srv_con_turno",
     unitId: "unit_samap",
     ticketTypeId: "tt_normal",
-    metadata: {},
+    metadata: {
+      serviceName: "Con Turno",
+      ticketTypeName: "Normal",
+      unitName: "Nueva Torre"
+    },
     createdAt: new Date().toISOString()
   },
   {
     id: "tk_002",
-    sequence: "P-032",
-    status: "called",
-    serviceId: "srv_laboratorio",
+    sequence: "S-413",
+    status: "waiting",
+    serviceId: "srv_sin_turno",
     unitId: "unit_samap",
-    ticketTypeId: "tt_priority",
-    metadata: { box: "Lab 3" },
+    ticketTypeId: "tt_normal",
+    metadata: {
+      serviceName: "Sin turno",
+      ticketTypeName: "Normal",
+      unitName: "Nueva Torre"
+    },
     createdAt: new Date().toISOString()
+  },
+  {
+    id: "tk_003",
+    sequence: "A-185",
+    status: "waiting",
+    serviceId: "srv_samap_turno",
+    unitId: "unit_samap",
+    ticketTypeId: "tt_schedule",
+    metadata: {
+      serviceName: "SAMAP con Turno",
+      ticketTypeName: "Agendado",
+      unitName: "Nueva Torre"
+    },
+    createdAt: new Date().toISOString()
+  }
+];
+
+export const currentCalls: TicketCall[] = [
+  {
+    ticketId: "tk_900",
+    deskId: "desk_lab",
+    deskName: "Box 3",
+    sequence: "P-032",
+    counter: "Ventanilla 03",
+    serviceName: "Laboratorio",
+    ticketTypeName: "Prioridad",
+    locale: "es",
+    announcementText: "Ticket P-032, dirigirse a Ventanilla 03, servicio Laboratorio.",
+    calledAt: new Date().toISOString()
   }
 ];
 
@@ -120,19 +330,13 @@ export const profileItems = [
   { id: "pf_superadmin", name: "Superadmin", scope: "Global" },
   { id: "pf_admin_unit", name: "Admin de unidad", scope: "Unidad" },
   { id: "pf_triage", name: "Operador de triage", scope: "Operacion" },
-  { id: "pf_monitor", name: "Monitor de panel", scope: "Pantalla" }
+  { id: "pf_attendance", name: "Atencion", scope: "Puesto" }
 ];
 
 export const adminUsers = [
-  { id: "usr_1", name: "Dalton Perez", email: "admin@saa.com.py", profile: "Superadmin" },
-  { id: "usr_2", name: "Ana Gomez", email: "triage@saa.com.py", profile: "Operador de triage" },
-  { id: "usr_3", name: "Luis Ferreira", email: "panel@saa.com.py", profile: "Monitor de panel" }
-];
-
-export const printTemplates = [
-  { id: "tpl_default", name: "Ticket institucional", scope: "Default", unit: "Unidad Central" },
-  { id: "tpl_lab", name: "Ticket laboratorio", scope: "Servicio", unit: "Unidad Central" },
-  { id: "tpl_priority", name: "Ticket preferencial", scope: "Tipo de ticket", unit: "Sucursal Sur" }
+  { id: "usr_1", name: "Administrador General", email: "admin@saa.com.py", profile: "Superadmin" },
+  { id: "usr_2", name: "Andrea Planas", email: "andrea@saa.com.py", profile: "Atencion" },
+  { id: "usr_3", name: "Luis Ferreira", email: "luis@saa.com.py", profile: "Atencion" }
 ];
 
 export const audioProfiles: Record<SupportedLocale, AudioProfile> = {
@@ -167,15 +371,3 @@ export const audioProfiles: Record<SupportedLocale, AudioProfile> = {
     repeat: 2
   }
 };
-
-export const currentCalls: TicketCall[] = [
-  {
-    ticketId: "tk_002",
-    sequence: "P-032",
-    counter: "Box 3",
-    serviceName: "Laboratorio",
-    ticketTypeName: "Prioridad",
-    locale: "es",
-    announcementText: "Ticket P-032, dirigirse a Box 3, servicio Laboratorio."
-  }
-];
