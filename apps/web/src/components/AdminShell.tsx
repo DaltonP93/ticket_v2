@@ -15,10 +15,21 @@ interface AdminShellProps {
   locale: SupportedLocale;
   onChangeLocale: (locale: SupportedLocale) => void;
   navigation: AdminNavItem[];
+  userName: string | null;
+  onLogout: () => void;
   children: ReactNode;
 }
 
-export function AdminShell({ title, subtitle, locale, onChangeLocale, navigation, children }: AdminShellProps) {
+export function AdminShell({
+  title,
+  subtitle,
+  locale,
+  onChangeLocale,
+  navigation,
+  userName,
+  onLogout,
+  children
+}: AdminShellProps) {
   const dateLabel = useMemo(
     () =>
       new Intl.DateTimeFormat(locale === "en" ? "en-US" : locale === "pt" ? "pt-BR" : "es-PY", {
@@ -80,6 +91,8 @@ export function AdminShell({ title, subtitle, locale, onChangeLocale, navigation
           </div>
 
           <div className="topbar-meta">
+            {userName ? <span>{userName}</span> : null}
+            <button className="route-pill" onClick={onLogout} type="button">Salir</button>
             <span>{translate(locale, "version")}</span>
             <span>{dateLabel}</span>
           </div>

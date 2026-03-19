@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "./components/AdminShell";
 import { OperationalShell } from "./components/OperationalShell";
 import { translate } from "./i18n";
+import { getStoredUser, logout } from "./lib/auth";
 import { AdminWorkspacePage } from "./pages/AdminWorkspacePage";
+import { LoginPage } from "./pages/LoginPage";
 import { PublicPanelPage } from "./pages/PublicPanelPage";
 import { TriagePage } from "./pages/TriagePage";
 
@@ -14,6 +16,7 @@ type Route =
   | "/admin/print"
   | "/admin/panel"
   | "/admin/integrations"
+  | "/login"
   | "/triage"
   | "/panel";
 
@@ -24,6 +27,7 @@ const validRoutes: Route[] = [
   "/admin/print",
   "/admin/panel",
   "/admin/integrations",
+  "/login",
   "/triage",
   "/panel"
 ];
@@ -36,6 +40,7 @@ function getCurrentRoute(): Route {
 export function App() {
   const [locale, setLocale] = useState<SupportedLocale>("es");
   const [route, setRoute] = useState<Route>(getCurrentRoute());
+  const [sessionUser, setSessionUser] = useState(() => getStoredUser());
 
   useEffect(() => {
     const onPopState = () => setRoute(getCurrentRoute());
@@ -46,6 +51,36 @@ export function App() {
   function navigate(nextRoute: Route) {
     window.history.pushState({}, "", nextRoute);
     setRoute(nextRoute);
+  }
+
+  function handleLogout() {
+    logout();
+    setSessionUser(null);
+    navigate("/login");
+  }
+
+  if (route === "/login") {
+    return (
+      <LoginPage
+        onSuccess={() => {
+          setSessionUser(getStoredUser());
+          navigate("/admin");
+        }}
+      />
+    );
+  }
+
+  const adminRoute = route.startsWith("/admin");
+  if (adminRoute && !sessionUser) {
+    window.history.replaceState({}, "", "/login");
+    return (
+      <LoginPage
+        onSuccess={() => {
+          setSessionUser(getStoredUser());
+          navigate("/admin");
+        }}
+      />
+    );
   }
 
   const adminNavigation = useMemo(
@@ -126,6 +161,8 @@ export function App() {
       title={adminTitle}
       subtitle={adminSubtitle}
       navigation={adminNavigation}
+      userName={sessionUser?.fullName ?? null}
+      onLogout={handleLogout}
     >
       <div className="floating-tabs">
         <button onClick={() => navigate("/triage")} type="button">{translate(locale, "triageTab")}</button>

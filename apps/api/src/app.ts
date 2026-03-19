@@ -1,6 +1,7 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { registerAudioRoutes } from "./modules/audio/audio.routes.js";
+import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 import { registerCatalogRoutes } from "./modules/catalog/catalog.routes.js";
 import { registerIntegrationRoutes } from "./modules/integrations/integration.routes.js";
 import { registerPanelRoutes } from "./modules/panel/panel.routes.js";
@@ -21,6 +22,7 @@ export async function buildApp() {
     uptime: process.uptime()
   }));
 
+  await registerAuthRoutes(app);
   await registerCatalogRoutes(app);
   await registerTicketRoutes(app);
   await registerPanelRoutes(app);

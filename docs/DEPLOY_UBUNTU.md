@@ -91,10 +91,50 @@ npm install
 ## 6. Compilar backend y frontend
 
 ```bash
+npm run prisma:generate --workspace @ticket-v2/api
+npm run prisma:push --workspace @ticket-v2/api
 npm run build
 ```
 
 El frontend compilado quedara en `apps/web/dist`.
+
+## 6.1 Crear usuario administrador inicial
+
+Generar hash para la contrasena:
+
+```bash
+node apps/api/scripts/hash-password.mjs TuPasswordSegura123
+```
+
+Crear perfil y usuario en PostgreSQL:
+
+```bash
+sudo -u postgres psql -d ticket_v2
+```
+
+```sql
+INSERT INTO "AdminProfile" ("id","code","name")
+VALUES ('profile_superadmin','SUPERADMIN','Superadmin')
+ON CONFLICT ("code") DO NOTHING;
+
+INSERT INTO "AdminUser" ("id","email","passwordHash","fullName","active","locale","profileId")
+VALUES (
+  'admin_root',
+  'admin@saa.com.py',
+  'REEMPLAZAR_POR_EL_HASH',
+  'Administrador General',
+  true,
+  'es',
+  'profile_superadmin'
+)
+ON CONFLICT ("email") DO NOTHING;
+```
+
+Salir con:
+
+```sql
+\q
+```
 
 ## 7. Publicar frontend
 
@@ -169,6 +209,8 @@ Probar sitio:
 ### Backend
 
 - `GET /health`
+- `POST /auth/login`
+- `GET /auth/me`
 - `GET /catalog/services`
 - `GET /audio/profiles`
 - `GET /audio/current-calls`
@@ -200,6 +242,13 @@ Probar sitio:
 - revisar `journalctl -u ticket-v2-api -f`
 - confirmar `node -v`
 - confirmar que existe `apps/api/dist/main.js`
+- confirmar `npx prisma generate` y `prisma db push`
+
+### Login no funciona
+
+- confirmar que existe `AUTH_SECRET` en `.env`
+- confirmar que se creo el usuario en tabla `AdminUser`
+- confirmar que el hash SHA-256 coincide con la contrasena usada
 
 ### Nginx devuelve 502
 

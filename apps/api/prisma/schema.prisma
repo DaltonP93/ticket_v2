@@ -14,6 +14,7 @@ model Unit {
   brandName   String
   services    Service[]
   ticketTypes TicketType[]
+  users       AdminUser[]
 }
 
 model Department {
@@ -50,3 +51,25 @@ model TicketType {
   unit                      Unit   @relation(fields: [unitId], references: [id])
 }
 
+model AdminProfile {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  description String?
+  users       AdminUser[]
+}
+
+model AdminUser {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  fullName     String
+  active       Boolean      @default(true)
+  locale       String       @default("es")
+  profileId    String
+  unitId       String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  profile      AdminProfile @relation(fields: [profileId], references: [id])
+  unit         Unit?        @relation(fields: [unitId], references: [id])
+}
