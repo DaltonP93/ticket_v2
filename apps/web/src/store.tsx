@@ -121,6 +121,64 @@ interface PersistedState {
 
 const STORAGE_KEY = "ticket-v2-store";
 
+function defaultPanelRuntime(): NonNullable<UnitSettings["panelRuntime"]> {
+  return {
+    serverUrl: "",
+    username: "",
+    password: "",
+    clientId: "",
+    clientSecret: "",
+    retries: 5,
+    locale: "es",
+    visibleServiceIds: [],
+    visibleDepartmentIds: [],
+    speechEnabled: true,
+    alertSound: "default",
+    showMedia: true,
+    showHistory: true,
+    showClock: true
+  };
+}
+
+function defaultTriageRuntime(): NonNullable<UnitSettings["triageRuntime"]> {
+  return {
+    serverUrl: "",
+    username: "",
+    password: "",
+    clientId: "",
+    clientSecret: "",
+    locale: "es",
+    columns: 2,
+    scale: 100,
+    waitTimeSeconds: 10,
+    printEnabled: true,
+    showTitle: true,
+    showSubtitle: true,
+    lockMenu: false,
+    groupByDepartment: false,
+    visibleServiceIds: [],
+    visibleDepartmentIds: []
+  };
+}
+
+function normalizeUnitSetting(item: UnitSettings): UnitSettings {
+  return {
+    ...item,
+    panelRuntime: {
+      ...defaultPanelRuntime(),
+      ...(item.panelRuntime ?? {})
+    },
+    triageRuntime: {
+      ...defaultTriageRuntime(),
+      ...(item.triageRuntime ?? {})
+    }
+  };
+}
+
+function normalizeUnitSettings(items: UnitSettings[]) {
+  return items.map(normalizeUnitSetting);
+}
+
 const initialState: PersistedState = {
   selectedUnitId: defaultUnitItems[0]?.id ?? "",
   units: defaultUnitItems,
@@ -132,7 +190,7 @@ const initialState: PersistedState = {
   profiles: defaultProfileItems,
   users: defaultAdminUsers,
   printTemplates: defaultPrintTemplates,
-  unitSettings: defaultUnitSettingsItems,
+  unitSettings: normalizeUnitSettings(defaultUnitSettingsItems),
   panelProfile: defaultPanelProfile,
   recentTickets: defaultRecentTickets,
   currentCalls: defaultCurrentCalls,
@@ -165,7 +223,17 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
     }
 
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored ? { ...initialState, ...JSON.parse(stored) } : initialState;
+    if (!stored) {
+      return initialState;
+    }
+
+    const parsed = JSON.parse(stored) as Partial<PersistedState>;
+
+    return {
+      ...initialState,
+      ...parsed,
+      unitSettings: normalizeUnitSettings((parsed.unitSettings as UnitSettings[] | undefined) ?? initialState.unitSettings)
+    };
   });
 
   useEffect(() => {
@@ -187,7 +255,7 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
         locations: payload.locations,
         desks: payload.desks,
         ticketTypes: payload.ticketTypes,
-        unitSettings: payload.unitSettings.length ? payload.unitSettings : current.unitSettings,
+        unitSettings: payload.unitSettings.length ? normalizeUnitSettings(payload.unitSettings) : current.unitSettings,
         panelProfile: payload.panelProfile ?? current.panelProfile,
         recentTickets: payload.recentTickets,
         currentCalls: payload.currentCalls
@@ -251,7 +319,9 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
                 preTicket: "",
                 postTicket: "",
                 onPrint: ""
-              }
+              },
+              panelRuntime: defaultPanelRuntime(),
+              triageRuntime: defaultTriageRuntime()
             }
           ]
         }));
@@ -329,11 +399,13 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
                     ...(patch.webhooks ?? {})
                   },
                   panelRuntime: {
-                    ...item.panelRuntime,
+                    ...defaultPanelRuntime(),
+                    ...(item.panelRuntime ?? {}),
                     ...(patch.panelRuntime ?? {})
                   },
                   triageRuntime: {
-                    ...item.triageRuntime,
+                    ...defaultTriageRuntime(),
+                    ...(item.triageRuntime ?? {}),
                     ...(patch.triageRuntime ?? {})
                   }
                 }
