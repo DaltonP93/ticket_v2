@@ -8,6 +8,60 @@ type UnitSettingsPatch = Partial<Omit<UnitSettings, "webhooks" | "panelRuntime" 
   triageRuntime?: Partial<NonNullable<UnitSettings["triageRuntime"]>>;
 };
 
+function defaultPanelRuntime(): NonNullable<UnitSettings["panelRuntime"]> {
+  return {
+    serverUrl: "",
+    username: "",
+    password: "",
+    clientId: "",
+    clientSecret: "",
+    retries: 5,
+    locale: "es",
+    visibleServiceIds: [],
+    visibleDepartmentIds: [],
+    speechEnabled: true,
+    alertSound: "default",
+    showMedia: true,
+    showHistory: true,
+    showClock: true
+  };
+}
+
+function defaultTriageRuntime(): NonNullable<UnitSettings["triageRuntime"]> {
+  return {
+    serverUrl: "",
+    username: "",
+    password: "",
+    clientId: "",
+    clientSecret: "",
+    locale: "es",
+    columns: 2,
+    scale: 100,
+    waitTimeSeconds: 10,
+    printEnabled: true,
+    showTitle: true,
+    showSubtitle: true,
+    lockMenu: false,
+    groupByDepartment: false,
+    visibleServiceIds: [],
+    visibleDepartmentIds: []
+  };
+}
+
+function normalizeUnitSetting(item: UnitSettings): UnitSettings {
+  return {
+    ...item,
+    panelRuntime: {
+      ...defaultPanelRuntime(),
+      ...(item.panelRuntime ?? {})
+    },
+    triageRuntime: {
+      ...defaultTriageRuntime(),
+      ...(item.triageRuntime ?? {})
+    }
+  };
+}
+
 export class SettingsService {
   getFeatureFlags() {
     return {
@@ -55,10 +109,12 @@ export class SettingsService {
         ...(patch.webhooks ?? {})
       },
       panelRuntime: {
+        ...defaultPanelRuntime(),
         ...(fallback.panelRuntime ?? {}),
         ...(patch.panelRuntime ?? {})
       },
       triageRuntime: {
+        ...defaultTriageRuntime(),
         ...(fallback.triageRuntime ?? {}),
         ...(patch.triageRuntime ?? {})
       }
@@ -133,10 +189,16 @@ export class SettingsService {
       ])
     );
 
-    return unitSettings.map((item) => ({
-      ...item,
-      ...(persistedMap.get(item.unitId) ?? {}),
-      unit: units.find((unit) => unit.id === item.unitId) ?? null
-    }));
+    return unitSettings.map((item) => {
+      const normalized = normalizeUnitSetting({
+        ...item,
+        ...(persistedMap.get(item.unitId) ?? {})
+      });
+
+      return {
+        ...normalized,
+        unit: units.find((unit) => unit.id === item.unitId) ?? null
+      };
+    });
   }
 }
