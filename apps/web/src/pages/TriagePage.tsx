@@ -36,17 +36,21 @@ function printTicket(html: string) {
 }
 
 export function TriagePage({ locale }: TriagePageProps) {
-  const { audioProfiles, emitTicket, printTemplates, recentTickets, selectedUnitId, services, ticketTypes, unitSettings, units } =
+  const { audioProfiles, departments, emitTicket, printTemplates, recentTickets, selectedUnitId, services, ticketTypes, unitSettings, units, updateUnitSettings } =
     useTicketSystem();
   const activeUnit = units.find((item) => item.id === selectedUnitId) ?? units[0];
   const activeSettings = unitSettings.find((item) => item.unitId === selectedUnitId) ?? unitSettings[0];
   const activeTemplate = printTemplates[0];
-  const availableServices = services.filter((item) => activeSettings?.triageServiceIds.includes(item.id));
+  const triageRuntime = activeSettings?.triageRuntime;
+  const triageVisibleServiceIds = triageRuntime?.visibleServiceIds?.length ? triageRuntime.visibleServiceIds : activeSettings?.triageServiceIds ?? [];
+  const availableServices = services.filter((item) => triageVisibleServiceIds.includes(item.id));
   const [selectedServiceId, setSelectedServiceId] = useState(availableServices[0]?.id ?? services[0]?.id ?? "");
   const [clientName, setClientName] = useState("");
   const [documentNumber, setDocumentNumber] = useState("");
   const [observation, setObservation] = useState("");
   const [lastSequence, setLastSequence] = useState(recentTickets[0]?.sequence ?? "C-001");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const selectedService = availableServices.find((item) => item.id === selectedServiceId) ?? services[0];
   const allowedTypes = ticketTypes.filter((item) =>
@@ -102,24 +106,30 @@ export function TriagePage({ locale }: TriagePageProps) {
     selectedType
   ]);
 
-  function handleEmit(ticketTypeId: string) {
-    const ticket = emitTicket({
-      locale,
-      serviceId: selectedServiceId,
-      ticketTypeId,
-      clientName,
-      clientDocument: documentNumber,
-      observation
-    });
+  async function handleEmit(ticketTypeId: string) {
+    setIsSubmitting(true);
 
-    setLastSequence(ticket.sequence);
+    try {
+      const ticket = await emitTicket({
+        locale,
+        serviceId: selectedServiceId,
+        ticketTypeId,
+        clientName,
+        clientDocument: documentNumber,
+        observation
+      });
 
-    const ticketType = ticketTypes.find((item) => item.id === ticketTypeId);
-    const html = printHtml
-      .replace(lastSequence, ticket.sequence)
-      .replace(`Tipo: ${selectedType?.name ?? "-"}`, `Tipo: ${ticketType?.name ?? selectedType?.name ?? "-"}`);
+      setLastSequence(ticket.sequence);
 
-    printTicket(html);
+      const ticketType = ticketTypes.find((item) => item.id === ticketTypeId);
+      const html = printHtml
+        .replace(lastSequence, ticket.sequence)
+        .replace(`Tipo: ${selectedType?.name ?? "-"}`, `Tipo: ${ticketType?.name ?? selectedType?.name ?? "-"}`);
+
+      printTicket(html);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -131,8 +141,218 @@ export function TriagePage({ locale }: TriagePageProps) {
               <h3>{translate(locale, "issueTicket")}</h3>
               <span>{translate(locale, "serviceStepHelp")}</span>
             </div>
-            <span className="status-pill">{activeUnit?.name}</span>
+            <div className="button-row">
+              <span className="status-pill">{activeUnit?.name}</span>
+              <button className="secondary-button" onClick={() => setShowSettings((current) => !current)} type="button">
+                Configuracion
+              </button>
+            </div>
           </div>
+
+          {showSettings && activeSettings ? (
+            <div className="settings-surface">
+              <div className="config-tabs">
+                <span className="config-tab active">Interface</span>
+                <span className="config-tab active">Server</span>
+                <span className="config-tab active">Services</span>
+                <span className="config-tab active">Web hooks</span>
+              </div>
+              <div className="form-grid">
+                <label>
+                  Locale
+                  <select
+                    value={triageRuntime?.locale ?? locale}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, locale: event.target.value as SupportedLocale }
+                      })
+                    }
+                  >
+                    <option value="es">ES</option>
+                    <option value="en">EN</option>
+                    <option value="pt">PT</option>
+                  </select>
+                </label>
+                <label>
+                  Columnas
+                  <input
+                    min={1}
+                    type="number"
+                    value={triageRuntime?.columns ?? 2}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, columns: Number(event.target.value) || 1 }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Escala
+                  <input
+                    min={50}
+                    step={10}
+                    type="number"
+                    value={triageRuntime?.scale ?? 100}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, scale: Number(event.target.value) || 100 }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Tiempo de espera
+                  <input
+                    min={1}
+                    type="number"
+                    value={triageRuntime?.waitTimeSeconds ?? 10}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, waitTimeSeconds: Number(event.target.value) || 10 }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Server
+                  <input
+                    value={triageRuntime?.serverUrl ?? ""}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, serverUrl: event.target.value }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Username
+                  <input
+                    value={triageRuntime?.username ?? ""}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, username: event.target.value }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Password
+                  <input
+                    type="password"
+                    value={triageRuntime?.password ?? ""}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, password: event.target.value }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Client ID
+                  <input
+                    value={triageRuntime?.clientId ?? ""}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, clientId: event.target.value }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Client Secret
+                  <input
+                    value={triageRuntime?.clientSecret ?? ""}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        triageRuntime: { ...triageRuntime!, clientSecret: event.target.value }
+                      })
+                    }
+                  />
+                </label>
+              </div>
+              <div className="toggle-grid">
+                <label><input checked={triageRuntime?.printEnabled ?? true} onChange={(event) => updateUnitSettings(activeSettings.unitId, { triageRuntime: { ...triageRuntime!, printEnabled: event.target.checked } })} type="checkbox" /> Print enabled</label>
+                <label><input checked={triageRuntime?.showTitle ?? true} onChange={(event) => updateUnitSettings(activeSettings.unitId, { triageRuntime: { ...triageRuntime!, showTitle: event.target.checked } })} type="checkbox" /> Show title</label>
+                <label><input checked={triageRuntime?.showSubtitle ?? true} onChange={(event) => updateUnitSettings(activeSettings.unitId, { triageRuntime: { ...triageRuntime!, showSubtitle: event.target.checked } })} type="checkbox" /> Show subtitle</label>
+                <label><input checked={triageRuntime?.lockMenu ?? false} onChange={(event) => updateUnitSettings(activeSettings.unitId, { triageRuntime: { ...triageRuntime!, lockMenu: event.target.checked } })} type="checkbox" /> Lock menu</label>
+                <label><input checked={triageRuntime?.groupByDepartment ?? false} onChange={(event) => updateUnitSettings(activeSettings.unitId, { triageRuntime: { ...triageRuntime!, groupByDepartment: event.target.checked } })} type="checkbox" /> Group by department</label>
+              </div>
+              <div className="checklist">
+                {services.map((service) => (
+                  <label key={service.id} className="toggle-row">
+                    <input
+                      checked={triageVisibleServiceIds.includes(service.id)}
+                      onChange={() => {
+                        const visibleServiceIds = triageVisibleServiceIds.includes(service.id)
+                          ? triageVisibleServiceIds.filter((item) => item !== service.id)
+                          : [...triageVisibleServiceIds, service.id];
+                        updateUnitSettings(activeSettings.unitId, {
+                          triageRuntime: { ...triageRuntime!, visibleServiceIds }
+                        });
+                      }}
+                      type="checkbox"
+                    />
+                    <span>{service.name}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="checklist">
+                {departments.map((department) => (
+                  <label key={department.id} className="toggle-row">
+                    <input
+                      checked={triageRuntime?.visibleDepartmentIds?.includes(department.id) ?? false}
+                      onChange={() => {
+                        const currentIds = triageRuntime?.visibleDepartmentIds ?? [];
+                        const visibleDepartmentIds = currentIds.includes(department.id)
+                          ? currentIds.filter((item) => item !== department.id)
+                          : [...currentIds, department.id];
+                        updateUnitSettings(activeSettings.unitId, {
+                          triageRuntime: { ...triageRuntime!, visibleDepartmentIds }
+                        });
+                      }}
+                      type="checkbox"
+                    />
+                    <span>{department.name}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="form-grid">
+                <label>
+                  Pre ticket webhook
+                  <input
+                    value={activeSettings.webhooks.preTicket}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        webhooks: { ...activeSettings.webhooks, preTicket: event.target.value }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Post ticket webhook
+                  <input
+                    value={activeSettings.webhooks.postTicket}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        webhooks: { ...activeSettings.webhooks, postTicket: event.target.value }
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  On print webhook
+                  <input
+                    value={activeSettings.webhooks.onPrint}
+                    onChange={(event) =>
+                      updateUnitSettings(activeSettings.unitId, {
+                        webhooks: { ...activeSettings.webhooks, onPrint: event.target.value }
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+          ) : null}
 
           <div className="kiosk-step">
             <h4>{translate(locale, "kioskSelectService")}</h4>
@@ -159,7 +379,8 @@ export function TriagePage({ locale }: TriagePageProps) {
                 <button
                   key={item.id}
                   className="ticket-emit-button"
-                  onClick={() => handleEmit(item.id)}
+                  disabled={isSubmitting}
+                  onClick={() => void handleEmit(item.id)}
                   style={{ background: item.color, color: item.textColor }}
                   type="button"
                 >

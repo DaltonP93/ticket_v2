@@ -180,6 +180,40 @@ export const unitSettingsItems: UnitSettings[] = [
       preTicket: "",
       postTicket: "",
       onPrint: ""
+    },
+    panelRuntime: {
+      serverUrl: "http://ticket.saa.com.py/api",
+      username: "panel",
+      password: "",
+      clientId: "panel_client",
+      clientSecret: "panel_secret",
+      retries: 5,
+      locale: "es",
+      visibleServiceIds: ["srv_con_turno", "srv_samap_turno", "srv_sin_turno"],
+      visibleDepartmentIds: ["dep_recepcion", "dep_estudios"],
+      speechEnabled: true,
+      alertSound: "default",
+      showMedia: true,
+      showHistory: true,
+      showClock: true
+    },
+    triageRuntime: {
+      serverUrl: "http://ticket.saa.com.py/api",
+      username: "triage",
+      password: "",
+      clientId: "triage_client",
+      clientSecret: "triage_secret",
+      locale: "es",
+      columns: 2,
+      scale: 100,
+      waitTimeSeconds: 10,
+      printEnabled: true,
+      showTitle: true,
+      showSubtitle: true,
+      lockMenu: false,
+      groupByDepartment: false,
+      visibleServiceIds: ["srv_con_turno", "srv_samap_turno", "srv_sin_turno"],
+      visibleDepartmentIds: ["dep_recepcion"]
     }
   },
   {
@@ -199,6 +233,40 @@ export const unitSettingsItems: UnitSettings[] = [
       preTicket: "",
       postTicket: "",
       onPrint: ""
+    },
+    panelRuntime: {
+      serverUrl: "http://ticket.saa.com.py/api",
+      username: "panel_lab",
+      password: "",
+      clientId: "panel_lab_client",
+      clientSecret: "panel_lab_secret",
+      retries: 5,
+      locale: "es",
+      visibleServiceIds: ["srv_laboratorio"],
+      visibleDepartmentIds: ["dep_estudios"],
+      speechEnabled: true,
+      alertSound: "default",
+      showMedia: true,
+      showHistory: true,
+      showClock: true
+    },
+    triageRuntime: {
+      serverUrl: "http://ticket.saa.com.py/api",
+      username: "triage_lab",
+      password: "",
+      clientId: "triage_lab_client",
+      clientSecret: "triage_lab_secret",
+      locale: "es",
+      columns: 1,
+      scale: 100,
+      waitTimeSeconds: 10,
+      printEnabled: true,
+      showTitle: true,
+      showSubtitle: true,
+      lockMenu: false,
+      groupByDepartment: false,
+      visibleServiceIds: ["srv_laboratorio"],
+      visibleDepartmentIds: ["dep_estudios"]
     }
   }
 ];

@@ -89,6 +89,40 @@ export interface UnitSettings {
     postTicket: string;
     onPrint: string;
   };
+  panelRuntime?: {
+    serverUrl: string;
+    username: string;
+    password: string;
+    clientId: string;
+    clientSecret: string;
+    retries: number;
+    locale: SupportedLocale;
+    visibleServiceIds: Identifier[];
+    visibleDepartmentIds: Identifier[];
+    speechEnabled: boolean;
+    alertSound: string;
+    showMedia: boolean;
+    showHistory: boolean;
+    showClock: boolean;
+  };
+  triageRuntime?: {
+    serverUrl: string;
+    username: string;
+    password: string;
+    clientId: string;
+    clientSecret: string;
+    locale: SupportedLocale;
+    columns: number;
+    scale: number;
+    waitTimeSeconds: number;
+    printEnabled: boolean;
+    showTitle: boolean;
+    showSubtitle: boolean;
+    lockMenu: boolean;
+    groupByDepartment: boolean;
+    visibleServiceIds: Identifier[];
+    visibleDepartmentIds: Identifier[];
+  };
 }
 
 export interface PanelProfile {

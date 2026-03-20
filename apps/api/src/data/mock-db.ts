@@ -189,6 +189,40 @@ export const unitSettings: UnitSettings[] = [
       preTicket: "",
       postTicket: "",
       onPrint: ""
+    },
+    panelRuntime: {
+      serverUrl: "http://ticket.saa.com.py/api",
+      username: "panel",
+      password: "",
+      clientId: "panel_client",
+      clientSecret: "panel_secret",
+      retries: 5,
+      locale: "es",
+      visibleServiceIds: ["srv_caja", "srv_laboratorio", "srv_consultas"],
+      visibleDepartmentIds: ["dep_cajas", "dep_estudios", "dep_consultas"],
+      speechEnabled: true,
+      alertSound: "default",
+      showMedia: true,
+      showHistory: true,
+      showClock: true
+    },
+    triageRuntime: {
+      serverUrl: "http://ticket.saa.com.py/api",
+      username: "triage",
+      password: "",
+      clientId: "triage_client",
+      clientSecret: "triage_secret",
+      locale: "es",
+      columns: 2,
+      scale: 100,
+      waitTimeSeconds: 10,
+      printEnabled: true,
+      showTitle: true,
+      showSubtitle: true,
+      lockMenu: false,
+      groupByDepartment: false,
+      visibleServiceIds: ["srv_caja", "srv_laboratorio", "srv_consultas"],
+      visibleDepartmentIds: ["dep_cajas", "dep_estudios", "dep_consultas"]
     }
   }
 ];

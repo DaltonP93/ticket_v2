@@ -71,6 +71,8 @@ export function AdminWorkspacePage({ authUser, locale, section }: AdminWorkspace
 
   const currentUnit = units.find((item) => item.id === selectedUnitId) ?? units[0];
   const currentSettings = unitSettings.find((item) => item.unitId === selectedUnitId) ?? unitSettings[0];
+  const triageRuntime = currentSettings?.triageRuntime;
+  const panelRuntime = currentSettings?.panelRuntime;
   const selectedTemplate = printTemplates.find((item) => item.id === selectedTemplateId) ?? printTemplates[0];
   const unitLocations = locations.filter((item) => item.unitId === selectedUnitId);
   const unitDesks = desks.filter((item) => item.unitId === selectedUnitId);
@@ -401,6 +403,90 @@ export function AdminWorkspacePage({ authUser, locale, section }: AdminWorkspace
                       <span>{item.name}</span>
                     </label>
                   ))}
+                </div>
+                <div className="form-grid spaced-top">
+                  <label>
+                    Server
+                    <input
+                      value={triageRuntime?.serverUrl ?? ""}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, serverUrl: event.target.value } })}
+                    />
+                  </label>
+                  <label>
+                    Username
+                    <input
+                      value={triageRuntime?.username ?? ""}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, username: event.target.value } })}
+                    />
+                  </label>
+                  <label>
+                    Password
+                    <input
+                      type="password"
+                      value={triageRuntime?.password ?? ""}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, password: event.target.value } })}
+                    />
+                  </label>
+                  <label>
+                    Client ID
+                    <input
+                      value={triageRuntime?.clientId ?? ""}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, clientId: event.target.value } })}
+                    />
+                  </label>
+                  <label>
+                    Client Secret
+                    <input
+                      value={triageRuntime?.clientSecret ?? ""}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, clientSecret: event.target.value } })}
+                    />
+                  </label>
+                  <label>
+                    Locale
+                    <select
+                      value={triageRuntime?.locale ?? locale}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, locale: event.target.value as SupportedLocale } })}
+                    >
+                      <option value="es">ES</option>
+                      <option value="en">EN</option>
+                      <option value="pt">PT</option>
+                    </select>
+                  </label>
+                  <label>
+                    Columnas
+                    <input
+                      min={1}
+                      type="number"
+                      value={triageRuntime?.columns ?? 2}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, columns: Number(event.target.value) || 1 } })}
+                    />
+                  </label>
+                  <label>
+                    Escala
+                    <input
+                      min={50}
+                      step={10}
+                      type="number"
+                      value={triageRuntime?.scale ?? 100}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, scale: Number(event.target.value) || 100 } })}
+                    />
+                  </label>
+                  <label>
+                    Wait time
+                    <input
+                      min={1}
+                      type="number"
+                      value={triageRuntime?.waitTimeSeconds ?? 10}
+                      onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, waitTimeSeconds: Number(event.target.value) || 10 } })}
+                    />
+                  </label>
+                </div>
+                <div className="toggle-grid spaced-top">
+                  <label><input checked={triageRuntime?.printEnabled ?? true} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, printEnabled: event.target.checked } })} type="checkbox" /> Print enabled</label>
+                  <label><input checked={triageRuntime?.showTitle ?? true} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, showTitle: event.target.checked } })} type="checkbox" /> Show title</label>
+                  <label><input checked={triageRuntime?.showSubtitle ?? true} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, showSubtitle: event.target.checked } })} type="checkbox" /> Show subtitle</label>
+                  <label><input checked={triageRuntime?.lockMenu ?? false} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, lockMenu: event.target.checked } })} type="checkbox" /> Lock menu</label>
+                  <label><input checked={triageRuntime?.groupByDepartment ?? false} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { triageRuntime: { ...triageRuntime!, groupByDepartment: event.target.checked } })} type="checkbox" /> Group by department</label>
                 </div>
               </article>
 
@@ -844,10 +930,85 @@ export function AdminWorkspacePage({ authUser, locale, section }: AdminWorkspace
                   onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelBrandingText: event.target.value })}
                 />
               </label>
+              <label>
+                Server
+                <input
+                  value={panelRuntime?.serverUrl ?? ""}
+                  onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, serverUrl: event.target.value } })}
+                />
+              </label>
+              <label>
+                Username
+                <input
+                  value={panelRuntime?.username ?? ""}
+                  onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, username: event.target.value } })}
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  type="password"
+                  value={panelRuntime?.password ?? ""}
+                  onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, password: event.target.value } })}
+                />
+              </label>
+              <label>
+                Client ID
+                <input
+                  value={panelRuntime?.clientId ?? ""}
+                  onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, clientId: event.target.value } })}
+                />
+              </label>
+              <label>
+                Client Secret
+                <input
+                  value={panelRuntime?.clientSecret ?? ""}
+                  onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, clientSecret: event.target.value } })}
+                />
+              </label>
+              <label>
+                Retries
+                <input
+                  min={1}
+                  type="number"
+                  value={panelRuntime?.retries ?? 5}
+                  onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, retries: Number(event.target.value) || 5 } })}
+                />
+              </label>
+              <label>
+                Alerta
+                <input
+                  value={panelRuntime?.alertSound ?? "default"}
+                  onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, alertSound: event.target.value } })}
+                />
+              </label>
             </div>
             <div className="toggle-grid spaced-top">
               <label><input checked={currentSettings?.panelShowHistory ?? true} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelShowHistory: event.target.checked })} type="checkbox" /> {translate(locale, "panelHistory")}</label>
               <label><input checked={currentSettings?.panelShowClock ?? true} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelShowClock: event.target.checked })} type="checkbox" /> {translate(locale, "panelClock")}</label>
+              <label><input checked={panelRuntime?.speechEnabled ?? true} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, speechEnabled: event.target.checked } })} type="checkbox" /> Speech</label>
+              <label><input checked={panelRuntime?.showMedia ?? true} onChange={(event) => currentSettings && updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, showMedia: event.target.checked } })} type="checkbox" /> Multimedia</label>
+            </div>
+            <div className="checklist spaced-top">
+              {services.map((service) => (
+                <label key={service.id} className="toggle-row">
+                  <input
+                    checked={panelRuntime?.visibleServiceIds?.includes(service.id) ?? false}
+                    onChange={() => {
+                      if (!currentSettings) {
+                        return;
+                      }
+                      const currentIds = panelRuntime?.visibleServiceIds ?? [];
+                      const visibleServiceIds = currentIds.includes(service.id)
+                        ? currentIds.filter((item) => item !== service.id)
+                        : [...currentIds, service.id];
+                      updateUnitSettings(currentSettings.unitId, { panelRuntime: { ...panelRuntime!, visibleServiceIds } });
+                    }}
+                    type="checkbox"
+                  />
+                  <span>{service.name}</span>
+                </label>
+              ))}
             </div>
           </article>
 

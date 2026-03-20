@@ -31,6 +31,7 @@ import {
   unitItems as defaultUnitItems,
   unitSettingsItems as defaultUnitSettingsItems
 } from "./mock-api";
+import { callNextTicketRequest, fetchBootstrapData, finishTicketRequest, issueTicketRequest } from "./lib/api";
 
 interface AdminUser {
   id: string;
@@ -56,6 +57,8 @@ interface PrintTemplate {
 }
 
 interface StoreShape {
+  isHydrated: boolean;
+  syncError: string | null;
   selectedUnitId: string;
   units: Unit[];
   departments: Department[];
@@ -73,6 +76,7 @@ interface StoreShape {
   audioProfiles: Record<SupportedLocale, AudioProfile>;
   connectors: typeof connectors;
   mediaAssets: { id: string; title: string; kind: string; url: string; durationSeconds: number }[];
+  refreshFromApi: () => Promise<void>;
   setSelectedUnit: (unitId: string) => void;
   addUnit: (input: Pick<Unit, "name" | "code" | "brandName" | "locale" | "logoUrl">) => void;
   addDepartment: (name: string) => void;
@@ -91,9 +95,9 @@ interface StoreShape {
     clientName: string;
     clientDocument: string;
     observation: string;
-  }) => Ticket;
-  callNextTicket: (input: { locale: SupportedLocale; deskId: string }) => TicketCall | undefined;
-  finishTicket: (ticketId: string) => void;
+  }) => Promise<Ticket>;
+  callNextTicket: (input: { locale: SupportedLocale; deskId: string }) => Promise<TicketCall | undefined>;
+  finishTicket: (ticketId: string) => Promise<void>;
 }
 
 interface PersistedState {
@@ -153,6 +157,8 @@ function nextSequence(tickets: Ticket[], prefix: string) {
 }
 
 export function TicketSystemProvider({ children }: { children: ReactNode }) {
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [state, setState] = useState<PersistedState>(() => {
     if (typeof window === "undefined") {
       return initialState;
@@ -166,10 +172,57 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  async function refreshFromApi() {
+    try {
+      const payload = await fetchBootstrapData();
+
+      setState((current) => ({
+        ...current,
+        selectedUnitId: payload.units.some((item) => item.id === current.selectedUnitId)
+          ? current.selectedUnitId
+          : payload.units[0]?.id ?? current.selectedUnitId,
+        units: payload.units,
+        departments: payload.departments,
+        services: payload.services,
+        locations: payload.locations,
+        desks: payload.desks,
+        ticketTypes: payload.ticketTypes,
+        unitSettings: payload.unitSettings.length ? payload.unitSettings : current.unitSettings,
+        panelProfile: payload.panelProfile ?? current.panelProfile,
+        recentTickets: payload.recentTickets,
+        currentCalls: payload.currentCalls
+      }));
+      setIsHydrated(true);
+      setSyncError(null);
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : "No se pudo sincronizar con el API.");
+      setIsHydrated(true);
+    }
+  }
+
+  useEffect(() => {
+    void refreshFromApi();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshFromApi();
+    }, 15000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   const value = useMemo<StoreShape>(
     () => ({
+      isHydrated,
+      syncError,
       ...state,
       connectors,
+      refreshFromApi,
       setSelectedUnit(unitId) {
         setState((current) => ({ ...current, selectedUnitId: unitId }));
       },
@@ -274,115 +327,174 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
                   webhooks: {
                     ...item.webhooks,
                     ...(patch.webhooks ?? {})
+                  },
+                  panelRuntime: {
+                    ...item.panelRuntime,
+                    ...(patch.panelRuntime ?? {})
+                  },
+                  triageRuntime: {
+                    ...item.triageRuntime,
+                    ...(patch.triageRuntime ?? {})
                   }
                 }
               : item
           )
         }));
       },
-      emitTicket(input) {
-        let createdTicket: Ticket | undefined;
+      async emitTicket(input) {
+        const service = state.services.find((item) => item.id === input.serviceId);
+        const ticketType = state.ticketTypes.find((item) => item.id === input.ticketTypeId);
+        const unit = state.units.find((item) => item.id === state.selectedUnitId) ?? state.units[0];
 
-        setState((current) => {
-          const service = current.services.find((item) => item.id === input.serviceId);
-          const ticketType = current.ticketTypes.find((item) => item.id === input.ticketTypeId);
-          const unit = current.units.find((item) => item.id === current.selectedUnitId) ?? current.units[0];
-          const prefix = ticketType?.prefix ?? service?.code.slice(0, 1) ?? "T";
-          const sequence = nextSequence(current.recentTickets, prefix);
-
-          createdTicket = {
-            id: buildId("tk"),
-            sequence,
-            status: "waiting",
+        try {
+          const createdTicket = await issueTicketRequest({
             serviceId: input.serviceId,
-            unitId: unit?.id ?? current.selectedUnitId,
             ticketTypeId: input.ticketTypeId,
-            clientName: input.clientName,
-            clientDocument: input.clientDocument,
+            clientName: input.clientName || undefined,
+            clientDocument: input.clientDocument || undefined,
             metadata: {
               observation: input.observation,
               serviceName: service?.name ?? "",
               ticketTypeName: ticketType?.name ?? "",
               unitName: unit?.name ?? "",
               createdLocale: input.locale
-            },
-            createdAt: new Date().toISOString()
-          };
-
-          return {
-            ...current,
-            recentTickets: [createdTicket, ...current.recentTickets].slice(0, 40)
-          };
-        });
-
-        return createdTicket!;
-      },
-      callNextTicket(input) {
-        let nextCall: TicketCall | undefined;
-
-        setState((current) => {
-          const desk = current.desks.find((item) => item.id === input.deskId);
-          if (!desk) {
-            return current;
-          }
-
-          const activeTicket = current.currentCalls.find((call) => {
-            if (call.deskId !== desk.id) {
-              return false;
             }
-
-            const ticket = current.recentTickets.find((item) => item.id === call.ticketId);
-            return ticket?.status === "in_service";
           });
 
-          if (activeTicket) {
-            nextCall = activeTicket;
-            return current;
+          setState((current) => ({
+            ...current,
+            recentTickets: [createdTicket, ...current.recentTickets.filter((item) => item.id !== createdTicket.id)].slice(0, 40)
+          }));
+
+          return createdTicket;
+        } catch (_error) {
+          let createdTicket: Ticket | undefined;
+
+          setState((current) => {
+            const localService = current.services.find((item) => item.id === input.serviceId);
+            const localTicketType = current.ticketTypes.find((item) => item.id === input.ticketTypeId);
+            const localUnit = current.units.find((item) => item.id === current.selectedUnitId) ?? current.units[0];
+            const prefix = localTicketType?.prefix ?? localService?.code.slice(0, 1) ?? "T";
+            const sequence = nextSequence(current.recentTickets, prefix);
+
+            createdTicket = {
+              id: buildId("tk"),
+              sequence,
+              status: "waiting",
+              serviceId: input.serviceId,
+              unitId: localUnit?.id ?? current.selectedUnitId,
+              ticketTypeId: input.ticketTypeId,
+              clientName: input.clientName,
+              clientDocument: input.clientDocument,
+              metadata: {
+                observation: input.observation,
+                serviceName: localService?.name ?? "",
+                ticketTypeName: localTicketType?.name ?? "",
+                unitName: localUnit?.name ?? "",
+                createdLocale: input.locale
+              },
+              createdAt: new Date().toISOString()
+            };
+
+            return {
+              ...current,
+              recentTickets: [createdTicket, ...current.recentTickets].slice(0, 40)
+            };
+          });
+
+          return createdTicket!;
+        }
+      },
+      async callNextTicket(input) {
+        try {
+          const nextCall = await callNextTicketRequest(input);
+
+          if (!nextCall) {
+            return undefined;
           }
 
-          const waitingTicket = current.recentTickets
-            .filter((item) => item.status === "waiting" && desk.serviceIds.includes(item.serviceId))
-            .sort((left, right) => left.createdAt.localeCompare(right.createdAt))[0];
-
-          if (!waitingTicket) {
-            return current;
-          }
-
-          const service = current.services.find((item) => item.id === waitingTicket.serviceId);
-          const ticketType = current.ticketTypes.find((item) => item.id === waitingTicket.ticketTypeId);
-          const location = current.locations.find((item) => item.id === desk.locationId);
-          const counter = location?.name ?? desk.name;
-          const profile = current.audioProfiles[input.locale];
-          const announcementText = profile.template
-            .replace(/\{sequence\}/g, waitingTicket.sequence)
-            .replace(/\{counter\}/g, counter)
-            .replace(/\{serviceName\}/g, service?.name ?? "Servicio");
-
-          nextCall = {
-            ticketId: waitingTicket.id,
-            deskId: desk.id,
-            deskName: desk.name,
-            sequence: waitingTicket.sequence,
-            counter,
-            serviceName: service?.name ?? "Servicio",
-            ticketTypeName: ticketType?.name ?? "Ticket",
-            locale: input.locale,
-            announcementText,
-            calledAt: new Date().toISOString()
-          };
-
-          return {
+          setState((current) => ({
             ...current,
             recentTickets: current.recentTickets.map((item) =>
-              item.id === waitingTicket.id ? { ...item, status: "in_service" } : item
+              item.id === nextCall?.ticketId ? { ...item, status: "in_service" } : item
             ),
-            currentCalls: [nextCall, ...current.currentCalls].slice(0, 16)
-          };
-        });
+            currentCalls: [nextCall, ...current.currentCalls.filter((item) => item.ticketId !== nextCall.ticketId)].slice(0, 16)
+          }));
 
-        return nextCall;
+          return nextCall;
+        } catch (_error) {
+          let nextCall: TicketCall | undefined;
+
+          setState((current) => {
+            const desk = current.desks.find((item) => item.id === input.deskId);
+            if (!desk) {
+              return current;
+            }
+
+            const activeTicket = current.currentCalls.find((call) => {
+              if (call.deskId !== desk.id) {
+                return false;
+              }
+
+              const ticket = current.recentTickets.find((item) => item.id === call.ticketId);
+              return ticket?.status === "in_service";
+            });
+
+            if (activeTicket) {
+              nextCall = activeTicket;
+              return current;
+            }
+
+            const waitingTicket = current.recentTickets
+              .filter((item) => item.status === "waiting" && desk.serviceIds.includes(item.serviceId))
+              .sort((left, right) => left.createdAt.localeCompare(right.createdAt))[0];
+
+            if (!waitingTicket) {
+              return current;
+            }
+
+            const service = current.services.find((item) => item.id === waitingTicket.serviceId);
+            const ticketType = current.ticketTypes.find((item) => item.id === waitingTicket.ticketTypeId);
+            const location = current.locations.find((item) => item.id === desk.locationId);
+            const counter = location?.name ?? desk.name;
+            const profile = current.audioProfiles[input.locale];
+            const announcementText = profile.template
+              .replace(/\{sequence\}/g, waitingTicket.sequence)
+              .replace(/\{counter\}/g, counter)
+              .replace(/\{serviceName\}/g, service?.name ?? "Servicio");
+
+            nextCall = {
+              ticketId: waitingTicket.id,
+              deskId: desk.id,
+              deskName: desk.name,
+              sequence: waitingTicket.sequence,
+              counter,
+              serviceName: service?.name ?? "Servicio",
+              ticketTypeName: ticketType?.name ?? "Ticket",
+              locale: input.locale,
+              announcementText,
+              calledAt: new Date().toISOString()
+            };
+
+            return {
+              ...current,
+              recentTickets: current.recentTickets.map((item) =>
+                item.id === waitingTicket.id ? { ...item, status: "in_service" } : item
+              ),
+              currentCalls: [nextCall, ...current.currentCalls].slice(0, 16)
+            };
+          });
+
+          return nextCall;
+        }
       },
-      finishTicket(ticketId) {
+      async finishTicket(ticketId) {
+        try {
+          await finishTicketRequest(ticketId);
+        } catch (_error) {
+          // Keep local fallback below.
+        }
+
         setState((current) => ({
           ...current,
           recentTickets: current.recentTickets.map((item) =>
@@ -391,7 +503,7 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
         }));
       }
     }),
-    [state]
+    [isHydrated, state, syncError]
   );
 
   return <TicketSystemContext.Provider value={value}>{children}</TicketSystemContext.Provider>;

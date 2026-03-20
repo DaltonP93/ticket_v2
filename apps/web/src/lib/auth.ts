@@ -2,7 +2,8 @@ const TOKEN_KEY = "ticket-v2-auth-token";
 const USER_KEY = "ticket-v2-auth-user";
 
 function apiBaseUrl() {
-  return `${window.location.origin}/api`;
+  const configured = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  return (configured ?? `${window.location.origin}/api`).replace(/\/$/, "");
 }
 
 export interface AuthUser {
