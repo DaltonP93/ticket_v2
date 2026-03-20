@@ -73,3 +73,24 @@ model AdminUser {
   profile      AdminProfile @relation(fields: [profileId], references: [id])
   unit         Unit?        @relation(fields: [unitId], references: [id])
 }
+
+model UnitSetting {
+  id                  String   @id @default(cuid())
+  unitId              String   @unique
+  printHeader         String
+  printFooter         String
+  printShowDate       Boolean  @default(true)
+  printShowTicketType Boolean  @default(true)
+  printShowUnitName   Boolean  @default(true)
+  printShowServiceName Boolean @default(true)
+  triageServiceIds    Json
+  panelShowHistory    Boolean  @default(true)
+  panelShowClock      Boolean  @default(true)
+  panelPrimaryMediaId String?
+  panelBrandingText   String?
+  webhooks            Json
+  panelRuntime        Json?
+  triageRuntime       Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}

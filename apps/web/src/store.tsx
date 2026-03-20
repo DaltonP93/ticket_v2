@@ -31,7 +31,7 @@ import {
   unitItems as defaultUnitItems,
   unitSettingsItems as defaultUnitSettingsItems
 } from "./mock-api";
-import { callNextTicketRequest, fetchBootstrapData, finishTicketRequest, issueTicketRequest } from "./lib/api";
+import { callNextTicketRequest, fetchBootstrapData, finishTicketRequest, issueTicketRequest, saveUnitSettingsRequest } from "./lib/api";
 
 interface AdminUser {
   id: string;
@@ -87,7 +87,14 @@ interface StoreShape {
   savePrintTemplate: (template: PrintTemplate) => void;
   addMediaAsset: (asset: { title: string; kind: string; url: string; durationSeconds: number }) => void;
   updatePanelProfile: (patch: Partial<Omit<PanelProfile, "theme">> & { theme?: Partial<PanelProfile["theme"]> }) => void;
-  updateUnitSettings: (unitId: string, patch: Partial<UnitSettings>) => void;
+  updateUnitSettings: (
+    unitId: string,
+    patch: Partial<Omit<UnitSettings, "webhooks" | "panelRuntime" | "triageRuntime">> & {
+      webhooks?: Partial<NonNullable<UnitSettings["webhooks"]>>;
+      panelRuntime?: Partial<NonNullable<UnitSettings["panelRuntime"]>>;
+      triageRuntime?: Partial<NonNullable<UnitSettings["triageRuntime"]>>;
+    }
+  ) => void;
   emitTicket: (input: {
     locale: SupportedLocale;
     serviceId: string;
@@ -412,6 +419,10 @@ export function TicketSystemProvider({ children }: { children: ReactNode }) {
               : item
           )
         }));
+
+        void saveUnitSettingsRequest(unitId, patch).catch((error) => {
+          setSyncError(error instanceof Error ? error.message : "No se pudo guardar la configuracion de la unidad.");
+        });
       },
       async emitTicket(input) {
         const service = state.services.find((item) => item.id === input.serviceId);

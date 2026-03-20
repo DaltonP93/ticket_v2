@@ -36,6 +36,12 @@ async function requestJson<T>(path: string, init?: RequestInit) {
   return (await response.json()) as T;
 }
 
+type UnitSettingsPatch = Partial<Omit<UnitSettings, "webhooks" | "panelRuntime" | "triageRuntime">> & {
+  webhooks?: Partial<NonNullable<UnitSettings["webhooks"]>>;
+  panelRuntime?: Partial<NonNullable<UnitSettings["panelRuntime"]>>;
+  triageRuntime?: Partial<NonNullable<UnitSettings["triageRuntime"]>>;
+};
+
 export async function fetchBootstrapData() {
   const [units, departments, services, ticketTypes, locations, desks, unitSettings, panelProfiles, recentTickets, currentCalls] =
     await Promise.all([
@@ -89,5 +95,12 @@ export function finishTicketRequest(ticketId: string) {
   return requestJson<{ success: boolean; ticketId: string }>("/attendance/finish", {
     method: "POST",
     body: JSON.stringify({ ticketId })
+  });
+}
+
+export function saveUnitSettingsRequest(unitId: string, patch: UnitSettingsPatch) {
+  return requestJson<UnitSettings & { unit?: Unit | null }>(`/settings/units/${unitId}`, {
+    method: "PUT",
+    body: JSON.stringify(patch)
   });
 }
