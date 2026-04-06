@@ -1,7 +1,8 @@
 import type { SupportedLocale } from "@ticket-v2/contracts";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { translate } from "../i18n";
 import { speakAnnouncement } from "../lib/audio";
+import { fetchTriageSnapshot, type TriageSnapshot } from "../lib/api";
 import { useTicketSystem } from "../store";
 
 interface TriagePageProps {
@@ -38,26 +39,73 @@ function printTicket(html: string) {
 export function TriagePage({ locale }: TriagePageProps) {
   const { audioProfiles, departments, emitTicket, printTemplates, recentTickets, selectedUnitId, services, ticketTypes, unitSettings, units, updateUnitSettings } =
     useTicketSystem();
-  const activeUnit = units.find((item) => item.id === selectedUnitId) ?? units[0];
-  const activeSettings = unitSettings.find((item) => item.unitId === selectedUnitId) ?? unitSettings[0];
-  const activeTemplate = printTemplates[0];
+  const [remoteSnapshot, setRemoteSnapshot] = useState<TriageSnapshot | null>(null);
+  const activeUnit = remoteSnapshot?.unit ?? units.find((item) => item.id === selectedUnitId) ?? units[0];
+  const activeSettings = remoteSnapshot?.settings ?? unitSettings.find((item) => item.unitId === selectedUnitId) ?? unitSettings[0];
+  const activeTemplate = printTemplates.find((item) => item.id === activeSettings?.printTemplateId) ?? printTemplates[0];
   const triageRuntime = activeSettings?.triageRuntime;
+  const unitServices = remoteSnapshot?.services?.length ? remoteSnapshot.services : services.filter((item) => item.unitId === selectedUnitId);
   const triageVisibleServiceIds = triageRuntime?.visibleServiceIds?.length ? triageRuntime.visibleServiceIds : activeSettings?.triageServiceIds ?? [];
-  const availableServices = services.filter((item) => triageVisibleServiceIds.includes(item.id));
-  const [selectedServiceId, setSelectedServiceId] = useState(availableServices[0]?.id ?? services[0]?.id ?? "");
+  const availableServices = unitServices.filter((item) => triageVisibleServiceIds.includes(item.id));
+  const [selectedServiceId, setSelectedServiceId] = useState(availableServices[0]?.id ?? unitServices[0]?.id ?? "");
   const [clientName, setClientName] = useState("");
   const [documentNumber, setDocumentNumber] = useState("");
   const [observation, setObservation] = useState("");
-  const [lastSequence, setLastSequence] = useState(recentTickets[0]?.sequence ?? "C-001");
+  const [lastSequence, setLastSequence] = useState(remoteSnapshot?.lastIssuedTicket?.sequence ?? recentTickets[0]?.sequence ?? "C-001");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
 
-  const selectedService = availableServices.find((item) => item.id === selectedServiceId) ?? services[0];
-  const allowedTypes = ticketTypes.filter((item) =>
+  const selectedService = availableServices.find((item) => item.id === selectedServiceId) ?? unitServices[0];
+  const availableTicketTypes = remoteSnapshot?.ticketTypes?.length
+    ? remoteSnapshot.ticketTypes
+    : ticketTypes.filter((item) => !item.unitId || item.unitId === selectedUnitId);
+  const allowedTypes = availableTicketTypes.filter((item) =>
     selectedService?.ticketTypeIds?.length ? selectedService.ticketTypeIds.includes(item.id) : true
   );
-  const selectedType = allowedTypes[0] ?? ticketTypes[0];
+  const selectedType = allowedTypes[0] ?? availableTicketTypes[0];
   const audioProfile = audioProfiles[locale];
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSnapshot() {
+      try {
+        const payload = await fetchTriageSnapshot(selectedUnitId);
+        if (active) {
+          setRemoteSnapshot(payload);
+          if (payload.lastIssuedTicket?.sequence) {
+            setLastSequence(payload.lastIssuedTicket.sequence);
+          }
+        }
+      } catch (_error) {
+        if (active) {
+          setRemoteSnapshot(null);
+        }
+      }
+    }
+
+    void loadSnapshot();
+    const timer = window.setInterval(() => {
+      void loadSnapshot();
+    }, 15000);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [selectedUnitId]);
+
+  useEffect(() => {
+    if (!availableServices.length) {
+      setSelectedServiceId("");
+      return;
+    }
+
+    if (!availableServices.some((item) => item.id === selectedServiceId)) {
+      setSelectedServiceId(availableServices[0].id);
+    }
+  }, [availableServices, selectedServiceId]);
 
   const previewText = useMemo(
     () =>
@@ -108,6 +156,7 @@ export function TriagePage({ locale }: TriagePageProps) {
 
   async function handleEmit(ticketTypeId: string) {
     setIsSubmitting(true);
+    setSubmissionError("");
 
     try {
       const ticket = await emitTicket({
@@ -121,12 +170,16 @@ export function TriagePage({ locale }: TriagePageProps) {
 
       setLastSequence(ticket.sequence);
 
-      const ticketType = ticketTypes.find((item) => item.id === ticketTypeId);
+      const ticketType = availableTicketTypes.find((item) => item.id === ticketTypeId);
       const html = printHtml
         .replace(lastSequence, ticket.sequence)
         .replace(`Tipo: ${selectedType?.name ?? "-"}`, `Tipo: ${ticketType?.name ?? selectedType?.name ?? "-"}`);
 
-      printTicket(html);
+      if (triageRuntime?.printEnabled ?? true) {
+        printTicket(html);
+      }
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : "No se pudo emitir el ticket.");
     } finally {
       setIsSubmitting(false);
     }
@@ -278,7 +331,7 @@ export function TriagePage({ locale }: TriagePageProps) {
                 <label><input checked={triageRuntime?.groupByDepartment ?? false} onChange={(event) => updateUnitSettings(activeSettings.unitId, { triageRuntime: { ...triageRuntime!, groupByDepartment: event.target.checked } })} type="checkbox" /> Group by department</label>
               </div>
               <div className="checklist">
-                {services.map((service) => (
+                {unitServices.map((service) => (
                   <label key={service.id} className="toggle-row">
                     <input
                       checked={triageVisibleServiceIds.includes(service.id)}
@@ -374,6 +427,8 @@ export function TriagePage({ locale }: TriagePageProps) {
           <div className="kiosk-step">
             <h4>{translate(locale, "chooseTicketType")}</h4>
             <p className="subtitle compact">{translate(locale, "directPrint")}</p>
+            {selectedType?.triageMessage ? <p className="subtitle compact">{selectedType.triageMessage}</p> : null}
+            {submissionError ? <p className="subtitle compact" style={{ color: "#c1121f" }}>{submissionError}</p> : null}
             <div className="ticket-type-grid compact">
               {allowedTypes.map((item) => (
                 <button
@@ -440,7 +495,7 @@ export function TriagePage({ locale }: TriagePageProps) {
 
           <div className="triage-last-issued">
             <span>Ultimo ticket emitido</span>
-            <strong>{recentTickets[0]?.sequence ?? lastSequence}</strong>
+            <strong>{remoteSnapshot?.lastIssuedTicket?.sequence ?? recentTickets[0]?.sequence ?? lastSequence}</strong>
           </div>
         </article>
       </div>

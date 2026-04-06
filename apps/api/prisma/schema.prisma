@@ -12,9 +12,18 @@ model Unit {
   code        String           @unique
   name        String
   brandName   String
+  locale      String           @default("es")
+  logoUrl     String?
   services    Service[]
   ticketTypes TicketType[]
   users       AdminUser[]
+  locations   Location[]
+  desks       Desk[]
+  settings    UnitSetting?
+  printTemplates PrintTemplate[]
+  mediaAssets MediaAsset[]
+  panelPlaylists PanelPlaylist[]
+  connectors  IntegrationConnector[]
 }
 
 model Department {
@@ -24,14 +33,37 @@ model Department {
 }
 
 model Service {
-  id            String   @id @default(cuid())
-  code          String   @unique
-  name          String
-  allowPriority Boolean  @default(true)
-  unitId        String
-  departmentId  String
-  unit          Unit     @relation(fields: [unitId], references: [id])
-  department    Department @relation(fields: [departmentId], references: [id])
+  id             String     @id @default(cuid())
+  code           String     @unique
+  name           String
+  allowPriority  Boolean    @default(true)
+  ticketTypeIds  Json       @default("[]")
+  unitId         String
+  departmentId   String
+  unit           Unit       @relation(fields: [unitId], references: [id])
+  department     Department @relation(fields: [departmentId], references: [id])
+}
+
+model Location {
+  id      String @id @default(cuid())
+  unitId  String
+  code    String
+  name    String
+  unit    Unit   @relation(fields: [unitId], references: [id])
+  desks   Desk[]
+
+  @@unique([unitId, code])
+}
+
+model Desk {
+  id           String   @id @default(cuid())
+  unitId       String
+  locationId   String
+  name         String
+  operatorName String
+  serviceIds   Json     @default("[]")
+  unit         Unit     @relation(fields: [unitId], references: [id])
+  location     Location @relation(fields: [locationId], references: [id])
 }
 
 model TicketType {
@@ -39,14 +71,17 @@ model TicketType {
   code                      String @unique
   name                      String
   description               String
+  prefix                    String?
   color                     String
   textColor                 String
+  icon                      String?
   baseWeight                Int    @default(0)
   requireClient             Boolean @default(false)
   requireDocument           Boolean @default(false)
   requireExternalValidation Boolean @default(false)
   allowPrint                Boolean @default(true)
   allowPanel                Boolean @default(true)
+  triageMessage             String?
   unitId                    String
   unit                      Unit   @relation(fields: [unitId], references: [id])
 }
@@ -56,6 +91,7 @@ model AdminProfile {
   code        String      @unique
   name        String
   description String?
+  permissions Json        @default("[]")
   users       AdminUser[]
 }
 
@@ -83,14 +119,125 @@ model UnitSetting {
   printShowTicketType Boolean  @default(true)
   printShowUnitName   Boolean  @default(true)
   printShowServiceName Boolean @default(true)
+  printTemplateId      String?
   triageServiceIds    Json
   panelShowHistory    Boolean  @default(true)
   panelShowClock      Boolean  @default(true)
   panelPrimaryMediaId String?
+  panelProfileId      String?
+  panelPlaylistId     String?
   panelBrandingText   String?
   webhooks            Json
   panelRuntime        Json?
   triageRuntime       Json?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  unit                Unit     @relation(fields: [unitId], references: [id])
+}
+
+model PanelProfile {
+  id              String   @id @default(cuid())
+  name            String
+  layout          String
+  locale          String?  @default("es")
+  themeBackground String
+  themeAccent     String
+  themeText       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PrintTemplate {
+  id        String   @id @default(cuid())
+  unitId    String?
+  name      String
+  scope     String
+  unit      String
+  header    String
+  footer    String
+  html      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  unitRef   Unit?    @relation(fields: [unitId], references: [id])
+}
+
+model MediaAsset {
+  id              String   @id @default(cuid())
+  unitId          String?
+  title           String
+  kind            String
+  url             String
+  durationSeconds Int      @default(12)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  unitRef         Unit?    @relation(fields: [unitId], references: [id])
+  playlistItems   PanelPlaylistItem[]
+}
+
+model PanelPlaylist {
+  id        String   @id @default(cuid())
+  unitId    String?
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  unitRef   Unit?    @relation(fields: [unitId], references: [id])
+  items     PanelPlaylistItem[]
+}
+
+model PanelPlaylistItem {
+  id              String        @id @default(cuid())
+  playlistId      String
+  assetId         String
+  position        Int
+  durationSeconds Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  playlist        PanelPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  asset           MediaAsset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, position])
+}
+
+model IntegrationConnector {
+  id        String   @id @default(cuid())
+  unitId    String?
+  code      String   @unique
+  name      String
+  type      String
+  status    String   @default("Draft")
+  endpoint  String?
+  enabled   Boolean  @default(true)
+  events    Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  unitRef   Unit?    @relation(fields: [unitId], references: [id])
+}
+
+model TicketRecord {
+  id             String   @id @default(cuid())
+  sequence       String
+  status         String
+  serviceId      String
+  unitId         String
+  ticketTypeId   String
+  clientName     String?
+  clientDocument String?
+  metadata       Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model TicketCallLog {
+  id               String   @id @default(cuid())
+  ticketId         String
+  deskId           String
+  deskName         String
+  sequence         String
+  counter          String
+  serviceName      String
+  ticketTypeName   String
+  locale           String
+  announcementText String
+  calledAt         DateTime @default(now())
 }

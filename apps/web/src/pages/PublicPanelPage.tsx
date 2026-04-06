@@ -1,6 +1,7 @@
-import type { SupportedLocale } from "@ticket-v2/contracts";
+import type { PanelPlaylist, SupportedLocale } from "@ticket-v2/contracts";
 import { useEffect, useMemo, useState } from "react";
 import { translate } from "../i18n";
+import { fetchOperationalSnapshot, fetchPanelPayload, type OperationalSnapshot } from "../lib/api";
 import { useTicketSystem } from "../store";
 
 interface PublicPanelPageProps {
@@ -8,25 +9,101 @@ interface PublicPanelPageProps {
 }
 
 export function PublicPanelPage({ locale }: PublicPanelPageProps) {
-  const { currentCalls, departments, services, mediaAssets, panelProfile, selectedUnitId, unitSettings, units, updateUnitSettings } = useTicketSystem();
+  const { currentCalls, departments, services, mediaAssets, panelPlaylists, panelProfile, selectedUnitId, unitSettings, units, updateUnitSettings } = useTicketSystem();
   const activeUnit = units.find((item) => item.id === selectedUnitId) ?? units[0];
   const activeSettings = unitSettings.find((item) => item.unitId === selectedUnitId) ?? unitSettings[0];
   const panelRuntime = activeSettings?.panelRuntime;
-  const visibleServiceIds = panelRuntime?.visibleServiceIds?.length ? panelRuntime.visibleServiceIds : services.map((service) => service.id);
+  const unitServices = services.filter((item) => item.unitId === selectedUnitId);
+  const unitMediaAssets = mediaAssets.filter((item) => !item.unitId || item.unitId === selectedUnitId);
+  const visibleServiceIds = panelRuntime?.visibleServiceIds?.length ? panelRuntime.visibleServiceIds : unitServices.map((service) => service.id);
   const filteredCalls = currentCalls.filter((call) => {
-    const service = services.find((item) => item.name === call.serviceName);
+    const service = unitServices.find((item) => item.name === call.serviceName);
     return service ? visibleServiceIds.includes(service.id) : true;
   });
-  const historyCalls = (panelRuntime?.showHistory ?? activeSettings?.panelShowHistory) ? filteredCalls.slice(0, 4) : [];
-  const activeCall = filteredCalls[0];
-  const initialMediaIndex = Math.max(
-    0,
-    mediaAssets.findIndex((item) => item.id === activeSettings?.panelPrimaryMediaId)
-  );
-  const [mediaIndex, setMediaIndex] = useState(initialMediaIndex);
+  const [remotePayload, setRemotePayload] = useState<{
+    config: typeof panelProfile;
+    calls: Array<{
+      id: string;
+      sequence: string;
+      status: string;
+      serviceId: string;
+      unitId: string;
+      ticketTypeId: string;
+      createdAt: string;
+      metadata: Record<string, string | number | boolean>;
+      service?: { id: string; name: string } | null;
+      ticketType?: { id: string; name: string } | null;
+    }>;
+    media: Array<{ id: string; kind: string; title: string; path: string; durationSeconds: number }>;
+    playlist?: PanelPlaylist | null;
+    audio: { enabled: boolean; locale: SupportedLocale; currentCalls: typeof currentCalls };
+  } | null>(null);
+  const [remoteSnapshot, setRemoteSnapshot] = useState<OperationalSnapshot | null>(null);
+  const [mediaIndex, setMediaIndex] = useState(0);
   const [clock, setClock] = useState(() => new Date());
   const [showSettings, setShowSettings] = useState(false);
-  const activeMedia = mediaAssets[mediaIndex] ?? mediaAssets[0];
+  const activePlaylist =
+    remotePayload?.playlist
+    ?? (activeSettings?.panelPlaylistId ? panelPlaylists.find((item) => item.id === activeSettings.panelPlaylistId) : null)
+    ?? panelPlaylists.find((item) => item.unitId === selectedUnitId)
+    ?? panelPlaylists[0];
+  const displayProfile = remotePayload?.config ?? panelProfile;
+  const displayMedia = useMemo(
+    () =>
+      remotePayload?.media.length
+        ? remotePayload.media.map((item) => ({
+            id: item.id,
+            kind: item.kind,
+            title: item.title,
+            url: item.path,
+            durationSeconds: item.durationSeconds
+          }))
+        : activePlaylist?.items.length
+          ? activePlaylist.items.map((item) => ({
+              id: item.assetId,
+              kind: item.kind,
+              title: item.title,
+              url: item.url,
+              durationSeconds: item.durationSeconds
+            }))
+        : unitMediaAssets,
+    [activePlaylist, remotePayload, unitMediaAssets]
+  );
+  const displayCalls = useMemo(
+    () =>
+      remotePayload?.audio.currentCalls?.length
+        ? remotePayload.audio.currentCalls
+        : remoteSnapshot?.currentCalls?.length
+          ? remoteSnapshot.currentCalls
+          : filteredCalls,
+    [filteredCalls, remotePayload, remoteSnapshot]
+  );
+  const historyCalls = useMemo(() => {
+    if (!(panelRuntime?.showHistory ?? activeSettings?.panelShowHistory)) {
+      return [];
+    }
+
+    if (displayCalls.length) {
+      return displayCalls.slice(0, 4);
+    }
+
+    const remoteHistory = (remoteSnapshot?.recentTickets ?? remotePayload?.calls ?? []).slice(0, 4);
+
+    return remoteHistory.map((item) => ({
+      ticketId: item.id,
+      deskId: "",
+      deskName: "",
+      sequence: item.sequence,
+      counter: String(item.metadata.counter ?? item.service?.name ?? "--"),
+      serviceName: item.service?.name ?? String(item.metadata.serviceName ?? "Servicio"),
+      ticketTypeName: item.ticketType?.name ?? String(item.metadata.ticketTypeName ?? "Ticket"),
+      locale,
+      announcementText: String(item.metadata.announcementText ?? ""),
+      calledAt: String(item.metadata.calledAt ?? item.createdAt ?? new Date().toISOString())
+    }));
+  }, [activeSettings?.panelShowHistory, displayCalls, locale, panelRuntime?.showHistory, remotePayload, remoteSnapshot]);
+  const activeCall = displayCalls[0];
+  const activeMedia = displayMedia[mediaIndex] ?? displayMedia[0];
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(new Date()), 1000);
@@ -34,16 +111,75 @@ export function PublicPanelPage({ locale }: PublicPanelPageProps) {
   }, []);
 
   useEffect(() => {
-    if (!mediaAssets.length) {
+    let active = true;
+
+    async function loadPayload() {
+      try {
+        const payload = await fetchPanelPayload(selectedUnitId);
+        if (active) {
+          setRemotePayload(payload);
+        }
+      } catch (_error) {
+        if (active) {
+          setRemotePayload(null);
+        }
+      }
+    }
+
+    void loadPayload();
+    const timer = window.setInterval(() => {
+      void loadPayload();
+    }, 10000);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [selectedUnitId]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSnapshot() {
+      try {
+        const payload = await fetchOperationalSnapshot(selectedUnitId);
+        if (active) {
+          setRemoteSnapshot(payload);
+        }
+      } catch (_error) {
+        if (active) {
+          setRemoteSnapshot(null);
+        }
+      }
+    }
+
+    void loadSnapshot();
+    const timer = window.setInterval(() => {
+      void loadSnapshot();
+    }, 10000);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [selectedUnitId]);
+
+  useEffect(() => {
+    const nextIndex = Math.max(0, displayMedia.findIndex((item) => item.id === activeSettings?.panelPrimaryMediaId));
+    setMediaIndex(nextIndex >= 0 ? nextIndex : 0);
+  }, [activeSettings?.panelPrimaryMediaId, displayMedia]);
+
+  useEffect(() => {
+    if (!displayMedia.length) {
       return;
     }
 
     const timer = window.setInterval(() => {
-      setMediaIndex((current) => (current + 1) % mediaAssets.length);
+      setMediaIndex((current) => (current + 1) % displayMedia.length);
     }, (activeMedia?.durationSeconds ?? 12) * 1000);
 
     return () => window.clearInterval(timer);
-  }, [activeMedia?.durationSeconds, mediaAssets.length]);
+  }, [activeMedia?.durationSeconds, displayMedia.length]);
 
   const dateLabel = useMemo(
     () =>
@@ -66,8 +202,8 @@ export function PublicPanelPage({ locale }: PublicPanelPageProps) {
     <div
       className="public-panel-screen public-panel-shell"
       style={{
-        background: panelProfile.theme.background,
-        color: panelProfile.theme.text
+        background: displayProfile.theme.background,
+        color: displayProfile.theme.text
       }}
     >
       <section className="public-panel-stage split-view">
@@ -101,12 +237,27 @@ export function PublicPanelPage({ locale }: PublicPanelPageProps) {
                   <input value={activeUnit?.logoUrl ?? ""} readOnly />
                 </label>
                 <label>
+                  Playlist
+                  <select
+                    value={activeSettings.panelPlaylistId ?? activePlaylist?.id ?? ""}
+                    onChange={(event) => updateUnitSettings(activeSettings.unitId, { panelPlaylistId: event.target.value })}
+                  >
+                    {panelPlaylists
+                      .filter((item) => !item.unitId || item.unitId === selectedUnitId)
+                      .map((playlist) => (
+                        <option key={playlist.id} value={playlist.id}>
+                          {playlist.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
                   Video / media principal
                   <select
-                    value={activeSettings.panelPrimaryMediaId ?? mediaAssets[0]?.id ?? ""}
+                    value={activeSettings.panelPrimaryMediaId ?? displayMedia[0]?.id ?? ""}
                     onChange={(event) => updateUnitSettings(activeSettings.unitId, { panelPrimaryMediaId: event.target.value })}
                   >
-                    {mediaAssets.map((asset) => (
+                    {displayMedia.map((asset) => (
                       <option key={asset.id} value={asset.id}>
                         {asset.title}
                       </option>
@@ -190,7 +341,7 @@ export function PublicPanelPage({ locale }: PublicPanelPageProps) {
                 <label><input checked={panelRuntime?.showClock ?? true} onChange={(event) => updateUnitSettings(activeSettings.unitId, { panelRuntime: { ...panelRuntime!, showClock: event.target.checked } })} type="checkbox" /> Reloj</label>
               </div>
               <div className="checklist">
-                {services.map((service) => (
+                {unitServices.map((service) => (
                   <label key={service.id} className="toggle-row">
                     <input
                       checked={visibleServiceIds.includes(service.id)}
@@ -255,7 +406,7 @@ export function PublicPanelPage({ locale }: PublicPanelPageProps) {
           ) : null}
         </div>
 
-        <div className="public-panel-call-column" style={{ background: panelProfile.theme.accent }}>
+        <div className="public-panel-call-column" style={{ background: displayProfile.theme.accent }}>
           <div className="public-call-stage">
             <span className="public-call-type">{activeCall?.ticketTypeName ?? "Normal"}</span>
             <strong className="public-call-sequence">{activeCall?.sequence ?? "--"}</strong>

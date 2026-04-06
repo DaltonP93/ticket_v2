@@ -1,8 +1,66 @@
 import { prisma } from "../../lib/prisma.js";
-import { createSignedToken, verifyPassword } from "../../lib/security.js";
+import { createSignedToken, hashPassword, verifyPassword } from "../../lib/security.js";
+import { loadEnv } from "../../config/env.js";
+
+const DEFAULT_SUPERADMIN_PERMISSIONS = ["overview", "catalog", "settings", "users", "attendance", "media", "print", "panel", "integrations", "triage"];
+
+function asStringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
 
 export class AuthService {
+  async ensureBootstrapAdmin() {
+    const env = loadEnv();
+    const email = env.bootstrapAdminEmail;
+    const password = env.bootstrapAdminPassword;
+    const fullName = env.bootstrapAdminName || "Administrador General";
+
+    if (!email || !password) {
+      return;
+    }
+
+    const adminCount = await prisma.adminUser.count().catch(() => 0);
+    if (adminCount > 0) {
+      return;
+    }
+
+    const superadminProfile = await prisma.adminProfile.upsert({
+      where: { code: "SUPERADMIN" },
+      create: {
+        code: "SUPERADMIN",
+        name: "Superadmin",
+        description: "Acceso total",
+        permissions: DEFAULT_SUPERADMIN_PERMISSIONS
+      },
+      update: {
+        name: "Superadmin",
+        description: "Acceso total",
+        permissions: DEFAULT_SUPERADMIN_PERMISSIONS
+      }
+    });
+
+    await prisma.adminUser.upsert({
+      where: { email },
+      create: {
+        email,
+        passwordHash: hashPassword(password),
+        fullName,
+        active: true,
+        locale: "es",
+        profileId: superadminProfile.id,
+        unitId: null
+      },
+      update: {
+        fullName,
+        active: true,
+        profileId: superadminProfile.id
+      }
+    }).catch(() => undefined);
+  }
+
   async login(input: { email: string; password: string; secret: string }) {
+    await this.ensureBootstrapAdmin();
+
     const user = await prisma.adminUser.findUnique({
       where: {
         email: input.email
@@ -31,6 +89,9 @@ export class AuthService {
         fullName: user.fullName,
         locale: user.locale,
         profile: user.profile.name,
+        profileCode: user.profile.code,
+        permissions: asStringArray(user.profile.permissions),
+        unitId: user.unitId,
         unit: user.unit?.name ?? null
       }
     };

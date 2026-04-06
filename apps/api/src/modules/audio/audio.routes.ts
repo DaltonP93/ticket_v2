@@ -21,7 +21,10 @@ export async function registerAudioRoutes(app: FastifyInstance) {
   const service = new AudioService();
 
   app.get("/audio/profiles", async () => service.listAudioProfiles());
-  app.get("/audio/current-calls", async () => service.listCurrentCalls());
+  app.get("/audio/current-calls", async (request) => {
+    const query = z.object({ unitId: z.string().optional() }).parse(request.query);
+    return service.listCurrentCalls(query.unitId);
+  });
 
   app.post("/audio/preview", async (request) => {
     const payload = previewSchema.parse(request.body);
@@ -30,6 +33,6 @@ export async function registerAudioRoutes(app: FastifyInstance) {
 
   app.post("/audio/call", async (request, reply) => {
     const payload = callSchema.parse(request.body);
-    return reply.code(201).send(service.callNextTicket(payload));
+    return reply.code(201).send(await service.callNextTicket(payload));
   });
 }

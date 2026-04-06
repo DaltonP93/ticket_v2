@@ -2,6 +2,7 @@ import type { SupportedLocale } from "@ticket-v2/contracts";
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "./components/AdminShell";
 import { OperationalShell } from "./components/OperationalShell";
+import { adminSectionFromRoute, canAccessSection, defaultRouteForAccess, resolveAccess, type AdminSection, type AppRoute } from "./lib/access";
 import type { AuthUser } from "./lib/auth";
 import { getStoredUser, logout } from "./lib/auth";
 import { translate } from "./i18n";
@@ -9,24 +10,9 @@ import { AdminWorkspacePage } from "./pages/AdminWorkspacePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PublicPanelPage } from "./pages/PublicPanelPage";
 import { TriagePage } from "./pages/TriagePage";
+import { useTicketSystem } from "./store";
 
-type Route =
-  | "/admin"
-  | "/admin/catalog"
-  | "/admin/settings"
-  | "/admin/users"
-  | "/admin/attendance"
-  | "/admin/media"
-  | "/admin/print"
-  | "/admin/panel"
-  | "/admin/integrations"
-  | "/login"
-  | "/triage"
-  | "/panel";
-
-type AdminSection = "overview" | "catalog" | "settings" | "users" | "attendance" | "media" | "print" | "panel" | "integrations";
-
-const validRoutes: Route[] = [
+const validRoutes: AppRoute[] = [
   "/admin",
   "/admin/catalog",
   "/admin/settings",
@@ -41,35 +27,12 @@ const validRoutes: Route[] = [
   "/panel"
 ];
 
-function getCurrentRoute(): Route {
-  const route = window.location.pathname as Route;
+function getCurrentRoute(): AppRoute {
+  const route = window.location.pathname as AppRoute;
   return validRoutes.includes(route) ? route : "/admin";
 }
 
-function resolveAdminSection(route: Route): AdminSection {
-  switch (route) {
-    case "/admin/catalog":
-      return "catalog";
-    case "/admin/settings":
-      return "settings";
-    case "/admin/users":
-      return "users";
-    case "/admin/attendance":
-      return "attendance";
-    case "/admin/media":
-      return "media";
-    case "/admin/print":
-      return "print";
-    case "/admin/panel":
-      return "panel";
-    case "/admin/integrations":
-      return "integrations";
-    default:
-      return "overview";
-  }
-}
-
-function resolveAdminCopy(locale: SupportedLocale, route: Route) {
+function resolveAdminCopy(locale: SupportedLocale, route: AppRoute) {
   switch (route) {
     case "/admin/catalog":
       return {
@@ -121,8 +84,16 @@ function resolveAdminCopy(locale: SupportedLocale, route: Route) {
 
 export function App() {
   const [locale, setLocale] = useState<SupportedLocale>("es");
-  const [route, setRoute] = useState<Route>(getCurrentRoute());
+  const [route, setRoute] = useState<AppRoute>(getCurrentRoute());
   const [sessionUser, setSessionUser] = useState<AuthUser | null>(() => getStoredUser());
+  const { setSelectedUnit } = useTicketSystem();
+  const access = resolveAccess(sessionUser);
+  const adminSection = adminSectionFromRoute(route);
+
+  function navigate(nextRoute: AppRoute) {
+    window.history.pushState({}, "", nextRoute);
+    setRoute(nextRoute);
+  }
 
   useEffect(() => {
     const onPopState = () => setRoute(getCurrentRoute());
@@ -130,10 +101,36 @@ export function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  function navigate(nextRoute: Route) {
-    window.history.pushState({}, "", nextRoute);
-    setRoute(nextRoute);
-  }
+  useEffect(() => {
+    if (!sessionUser) {
+      return;
+    }
+
+    if (sessionUser.locale === "es" || sessionUser.locale === "en" || sessionUser.locale === "pt") {
+      setLocale(sessionUser.locale);
+    }
+
+    if (sessionUser.unitId) {
+      setSelectedUnit(sessionUser.unitId);
+    }
+  }, [sessionUser, setSelectedUnit]);
+
+  useEffect(() => {
+    if (!sessionUser) {
+      return;
+    }
+
+    if (route.startsWith("/admin")) {
+      if (!access.canUseAdmin || !canAccessSection(access, adminSection)) {
+        navigate(defaultRouteForAccess(access));
+      }
+      return;
+    }
+
+    if (route === "/triage" && !access.canUseTriage && access.canUseAdmin) {
+      navigate(defaultRouteForAccess(access));
+    }
+  }, [access, adminSection, route, sessionUser]);
 
   function handleLogout() {
     logout();
@@ -145,8 +142,9 @@ export function App() {
     return (
       <LoginPage
         onSuccess={() => {
-          setSessionUser(getStoredUser());
-          navigate("/admin");
+          const nextUser = getStoredUser();
+          setSessionUser(nextUser);
+          navigate(defaultRouteForAccess(resolveAccess(nextUser)));
         }}
       />
     );
@@ -157,26 +155,28 @@ export function App() {
     return (
       <LoginPage
         onSuccess={() => {
-          setSessionUser(getStoredUser());
-          navigate("/admin");
+          const nextUser = getStoredUser();
+          setSessionUser(nextUser);
+          navigate(defaultRouteForAccess(resolveAccess(nextUser)));
         }}
       />
     );
   }
 
   const adminNavigation = useMemo(
-    () => [
-      { id: "overview", label: translate(locale, "dashboardTab"), active: route === "/admin", onClick: () => navigate("/admin") },
-      { id: "catalog", label: translate(locale, "catalogTab"), active: route === "/admin/catalog", onClick: () => navigate("/admin/catalog") },
-      { id: "settings", label: translate(locale, "settingsTab"), active: route === "/admin/settings", onClick: () => navigate("/admin/settings") },
-      { id: "users", label: translate(locale, "usersTab"), active: route === "/admin/users", onClick: () => navigate("/admin/users") },
-      { id: "attendance", label: translate(locale, "attendanceTab"), active: route === "/admin/attendance", onClick: () => navigate("/admin/attendance") },
-      { id: "media", label: translate(locale, "mediaTab"), active: route === "/admin/media", onClick: () => navigate("/admin/media") },
-      { id: "print", label: translate(locale, "printTab"), active: route === "/admin/print", onClick: () => navigate("/admin/print") },
-      { id: "panel", label: translate(locale, "panelDesignerTab"), active: route === "/admin/panel", onClick: () => navigate("/admin/panel") },
-      { id: "integrations", label: translate(locale, "integrationsTab"), active: route === "/admin/integrations", onClick: () => navigate("/admin/integrations") }
-    ],
-    [locale, route]
+    () =>
+      [
+        { id: "overview", label: translate(locale, "dashboardTab"), active: route === "/admin", onClick: () => navigate("/admin") },
+        { id: "catalog", label: translate(locale, "catalogTab"), active: route === "/admin/catalog", onClick: () => navigate("/admin/catalog") },
+        { id: "settings", label: translate(locale, "settingsTab"), active: route === "/admin/settings", onClick: () => navigate("/admin/settings") },
+        { id: "users", label: translate(locale, "usersTab"), active: route === "/admin/users", onClick: () => navigate("/admin/users") },
+        { id: "attendance", label: translate(locale, "attendanceTab"), active: route === "/admin/attendance", onClick: () => navigate("/admin/attendance") },
+        { id: "media", label: translate(locale, "mediaTab"), active: route === "/admin/media", onClick: () => navigate("/admin/media") },
+        { id: "print", label: translate(locale, "printTab"), active: route === "/admin/print", onClick: () => navigate("/admin/print") },
+        { id: "panel", label: translate(locale, "panelDesignerTab"), active: route === "/admin/panel", onClick: () => navigate("/admin/panel") },
+        { id: "integrations", label: translate(locale, "integrationsTab"), active: route === "/admin/integrations", onClick: () => navigate("/admin/integrations") }
+      ].filter((item) => canAccessSection(access, item.id as AdminSection)),
+    [access, locale, route]
   );
 
   if (route === "/triage") {
@@ -188,9 +188,11 @@ export function App() {
         subtitle={translate(locale, "triageSubtitle")}
         actions={
           <div className="topbar-meta">
-            <button className="route-pill" onClick={() => navigate("/admin")} type="button">
-              {translate(locale, "goToAdmin")}
-            </button>
+            {access.canUseAdmin ? (
+              <button className="route-pill" onClick={() => navigate(defaultRouteForAccess(access))} type="button">
+                {translate(locale, "goToAdmin")}
+              </button>
+            ) : null}
             <button className="route-pill" onClick={() => navigate("/panel")} type="button">
               {translate(locale, "publicPanelTab")}
             </button>
@@ -216,17 +218,20 @@ export function App() {
       subtitle={adminCopy.subtitle}
       navigation={adminNavigation}
       userName={sessionUser?.fullName ?? null}
+      userMeta={sessionUser ? `${sessionUser.profile}${sessionUser.unit ? ` | ${sessionUser.unit}` : ""}` : null}
       onLogout={handleLogout}
     >
       <div className="floating-tabs">
-        <button onClick={() => navigate("/triage")} type="button">
-          {translate(locale, "triageTab")}
-        </button>
+        {access.canUseTriage ? (
+          <button onClick={() => navigate("/triage")} type="button">
+            {translate(locale, "triageTab")}
+          </button>
+        ) : null}
         <button onClick={() => navigate("/panel")} type="button">
           {translate(locale, "publicPanelTab")}
         </button>
       </div>
-      <AdminWorkspacePage authUser={sessionUser} locale={locale} section={resolveAdminSection(route)} />
+      <AdminWorkspacePage authUser={sessionUser} locale={locale} section={adminSection} />
     </AdminShell>
   );
 }

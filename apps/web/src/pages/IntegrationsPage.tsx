@@ -1,12 +1,15 @@
 import type { SupportedLocale } from "@ticket-v2/contracts";
-import { connectors } from "../mock-api";
 import { translate } from "../i18n";
+import { useTicketSystem } from "../store";
 
 interface IntegrationsPageProps {
   locale: SupportedLocale;
 }
 
 export function IntegrationsPage({ locale }: IntegrationsPageProps) {
+  const { connectors, selectedUnitId } = useTicketSystem();
+  const visibleConnectors = connectors.filter((item) => !item.unitId || item.unitId === selectedUnitId);
+
   return (
     <section className="page-grid">
       <article className="panel-card">
@@ -16,11 +19,11 @@ export function IntegrationsPage({ locale }: IntegrationsPageProps) {
         </div>
 
         <div className="list-table">
-          {connectors.map((connector) => (
+          {visibleConnectors.map((connector) => (
             <div key={connector.id} className="list-row connector-row">
               <div>
                 <strong>{connector.name}</strong>
-                <p>{connector.type}</p>
+                <p>{connector.type}{connector.endpoint ? ` | ${connector.endpoint}` : ""}</p>
               </div>
               <span className="status-pill">{connector.status}</span>
             </div>

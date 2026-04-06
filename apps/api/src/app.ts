@@ -1,7 +1,9 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
+import { registerAdminRoutes } from "./modules/admin/admin.routes.js";
 import { registerAttendanceRoutes } from "./modules/attendance/attendance.routes.js";
 import { registerAudioRoutes } from "./modules/audio/audio.routes.js";
+import { AuthService } from "./modules/auth/auth.service.js";
 import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 import { registerCatalogRoutes } from "./modules/catalog/catalog.routes.js";
 import { registerIntegrationRoutes } from "./modules/integrations/integration.routes.js";
@@ -13,6 +15,7 @@ export async function buildApp() {
   const app = Fastify({
     logger: true
   });
+  const authService = new AuthService();
 
   await app.register(cors, {
     origin: true
@@ -24,6 +27,7 @@ export async function buildApp() {
   }));
 
   await registerAuthRoutes(app);
+  await registerAdminRoutes(app);
   await registerCatalogRoutes(app);
   await registerTicketRoutes(app);
   await registerAttendanceRoutes(app);
@@ -31,6 +35,7 @@ export async function buildApp() {
   await registerAudioRoutes(app);
   await registerIntegrationRoutes(app);
   await registerSettingsRoutes(app);
+  await authService.ensureBootstrapAdmin();
 
   return app;
 }

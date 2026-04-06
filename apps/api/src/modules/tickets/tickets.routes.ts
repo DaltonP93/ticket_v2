@@ -13,13 +13,28 @@ const issueTicketSchema = z.object({
 export async function registerTicketRoutes(app: FastifyInstance) {
   const service = new TicketsService();
 
-  app.get("/ticket-types", async () => service.listTicketTypes());
-  app.get("/tickets", async () => service.listTickets());
+  app.get("/ticket-types", async (request) => {
+    const query = z.object({ unitId: z.string().optional() }).parse(request.query);
+    return service.listTicketTypes(query.unitId);
+  });
+  app.get("/tickets/triage-snapshot", async (request) => {
+    const query = z.object({ unitId: z.string().optional() }).parse(request.query);
+    return service.getTriageSnapshot(query.unitId);
+  });
+  app.get("/tickets", async (request) => {
+    const query = z.object({ unitId: z.string().optional() }).parse(request.query);
+    return service.listTickets(query.unitId);
+  });
 
   app.post("/tickets/issue", async (request, reply) => {
     const payload = issueTicketSchema.parse(request.body);
-    const ticket = service.issueTicket(payload);
-    return reply.code(201).send(ticket);
+    try {
+      const ticket = await service.issueTicket(payload);
+      return reply.code(201).send(ticket);
+    } catch (error) {
+      return reply.code(400).send({
+        message: error instanceof Error ? error.message : "No se pudo emitir el ticket."
+      });
+    }
   });
 }
-

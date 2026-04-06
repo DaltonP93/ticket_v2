@@ -3,6 +3,8 @@ import { PanelService } from "./panel.service.js";
 
 export async function registerPanelRoutes(app: FastifyInstance) {
   const service = new PanelService();
-  app.get("/panel/payload", async () => service.getPanelPayload());
+  app.get("/panel/payload", async (request) => {
+    const query = request.query as { unitId?: string };
+    return service.getPanelPayload(query.unitId);
+  });
 }
-

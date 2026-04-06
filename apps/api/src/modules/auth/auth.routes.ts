@@ -4,6 +4,10 @@ import { loadEnv } from "../../config/env.js";
 import { verifySignedToken } from "../../lib/security.js";
 import { AuthService } from "./auth.service.js";
 
+function asStringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1)
@@ -55,6 +59,9 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         fullName: user.fullName,
         locale: user.locale,
         profile: user.profile.name,
+        profileCode: user.profile.code,
+        permissions: asStringArray(user.profile.permissions),
+        unitId: user.unitId,
         unit: user.unit?.name ?? null
       }
     };

@@ -2,7 +2,10 @@ import type {
   AudioProfile,
   Department,
   Desk,
+  IntegrationConnector,
   Location,
+  MediaAsset,
+  PanelPlaylist,
   PanelProfile,
   ServiceCatalogItem,
   SupportedLocale,
@@ -48,6 +51,7 @@ export const departments: Department[] = [
 export const ticketTypeItems: TicketType[] = [
   {
     id: "tt_normal",
+    unitId: "unit_samap",
     code: "NORMAL",
     name: "Normal",
     description: "Atencion convencional",
@@ -63,6 +67,7 @@ export const ticketTypeItems: TicketType[] = [
   },
   {
     id: "tt_priority",
+    unitId: "unit_samap",
     code: "PRIORITY",
     name: "Prioridad",
     description: "Atencion preferencial",
@@ -78,6 +83,7 @@ export const ticketTypeItems: TicketType[] = [
   },
   {
     id: "tt_schedule",
+    unitId: "unit_samap",
     code: "SCHEDULED",
     name: "Agendado",
     description: "Turno con cita previa",
@@ -90,12 +96,45 @@ export const ticketTypeItems: TicketType[] = [
     requireExternalValidation: false,
     allowPrint: true,
     allowPanel: true
+  },
+  {
+    id: "tt_lab_normal",
+    unitId: "unit_laboratorio",
+    code: "LAB_NORMAL",
+    name: "Normal",
+    description: "Atencion de laboratorio",
+    prefix: "L",
+    color: "#1f57b8",
+    textColor: "#ffffff",
+    baseWeight: 0,
+    requireClient: false,
+    requireDocument: false,
+    requireExternalValidation: false,
+    allowPrint: true,
+    allowPanel: true
+  },
+  {
+    id: "tt_lab_priority",
+    unitId: "unit_laboratorio",
+    code: "LAB_PRIORITY",
+    name: "Prioridad",
+    description: "Prioridad laboratorio",
+    prefix: "LP",
+    color: "#cf3a11",
+    textColor: "#ffffff",
+    baseWeight: 10,
+    requireClient: false,
+    requireDocument: false,
+    requireExternalValidation: false,
+    allowPrint: true,
+    allowPanel: true
   }
 ];
 
 export const serviceItems: ServiceCatalogItem[] = [
   {
     id: "srv_con_turno",
+    unitId: "unit_samap",
     code: "CON",
     name: "Con Turno",
     departmentId: "dep_recepcion",
@@ -104,6 +143,7 @@ export const serviceItems: ServiceCatalogItem[] = [
   },
   {
     id: "srv_samap_turno",
+    unitId: "unit_samap",
     code: "SAM",
     name: "SAMAP con Turno",
     departmentId: "dep_recepcion",
@@ -112,6 +152,7 @@ export const serviceItems: ServiceCatalogItem[] = [
   },
   {
     id: "srv_sin_turno",
+    unitId: "unit_samap",
     code: "SIN",
     name: "Sin turno",
     departmentId: "dep_recepcion",
@@ -120,11 +161,12 @@ export const serviceItems: ServiceCatalogItem[] = [
   },
   {
     id: "srv_laboratorio",
+    unitId: "unit_laboratorio",
     code: "LAB",
     name: "Laboratorio",
     departmentId: "dep_estudios",
     allowPriority: true,
-    ticketTypeIds: ["tt_normal", "tt_priority"]
+    ticketTypeIds: ["tt_lab_normal", "tt_lab_priority"]
   }
 ];
 
@@ -171,10 +213,13 @@ export const unitSettingsItems: UnitSettings[] = [
     printShowTicketType: true,
     printShowUnitName: true,
     printShowServiceName: true,
+    printTemplateId: "tpl_default",
     triageServiceIds: ["srv_con_turno", "srv_samap_turno", "srv_sin_turno"],
     panelShowHistory: true,
     panelShowClock: true,
     panelPrimaryMediaId: "media_001",
+    panelProfileId: "pp_default",
+    panelPlaylistId: "playlist_samap",
     panelBrandingText: "Con turno",
     webhooks: {
       preTicket: "",
@@ -224,10 +269,13 @@ export const unitSettingsItems: UnitSettings[] = [
     printShowTicketType: true,
     printShowUnitName: true,
     printShowServiceName: true,
+    printTemplateId: "tpl_lab",
     triageServiceIds: ["srv_laboratorio"],
     panelShowHistory: true,
     panelShowClock: true,
     panelPrimaryMediaId: "media_002",
+    panelProfileId: "pp_default",
+    panelPlaylistId: "playlist_lab",
     panelBrandingText: "Panel institucional",
     webhooks: {
       preTicket: "",
@@ -283,6 +331,8 @@ export const panelProfile: PanelProfile = {
   }
 };
 
+export const panelProfiles: PanelProfile[] = [panelProfile];
+
 export const printTemplates = [
   {
     id: "tpl_default",
@@ -304,9 +354,10 @@ export const printTemplates = [
   }
 ];
 
-export const mediaAssets = [
+export const mediaAssets: MediaAsset[] = [
   {
     id: "media_001",
+    unitId: "unit_samap",
     title: "Video institucional principal",
     kind: "video",
     url: "https://www.w3schools.com/html/mov_bbb.mp4",
@@ -314,6 +365,7 @@ export const mediaAssets = [
   },
   {
     id: "media_002",
+    unitId: "unit_samap",
     title: "Chequeo preventivo",
     kind: "image",
     url: "https://placehold.co/1200x675?text=Chequeo+preventivo",
@@ -321,10 +373,66 @@ export const mediaAssets = [
   },
   {
     id: "media_003",
+    unitId: "unit_laboratorio",
     title: "Promocion laboratorio",
     kind: "image",
     url: "https://placehold.co/1200x675?text=Promocion+Laboratorio",
     durationSeconds: 12
+  }
+];
+
+export const panelPlaylists: PanelPlaylist[] = [
+  {
+    id: "playlist_samap",
+    unitId: "unit_samap",
+    name: "Rotacion principal",
+    active: true,
+    items: [
+      {
+        id: "playlist_item_001",
+        assetId: "media_001",
+        title: "Video institucional principal",
+        kind: "video",
+        url: "https://www.w3schools.com/html/mov_bbb.mp4",
+        durationSeconds: 20,
+        position: 1
+      },
+      {
+        id: "playlist_item_002",
+        assetId: "media_002",
+        title: "Chequeo preventivo",
+        kind: "image",
+        url: "https://placehold.co/1200x675?text=Chequeo+preventivo",
+        durationSeconds: 12,
+        position: 2
+      }
+    ]
+  },
+  {
+    id: "playlist_lab",
+    unitId: "unit_laboratorio",
+    name: "Rotacion laboratorio",
+    active: true,
+    items: [
+      {
+        id: "playlist_item_003",
+        assetId: "media_003",
+        title: "Promocion laboratorio",
+        kind: "image",
+        url: "https://placehold.co/1200x675?text=Promocion+Laboratorio",
+        durationSeconds: 12,
+        position: 1
+      },
+      {
+        id: "playlist_item_004",
+        assetId: "media_002",
+        title: "Chequeo preventivo",
+        kind: "image",
+        url: "https://placehold.co/1200x675?text=Chequeo+preventivo",
+        durationSeconds: 12,
+        position: 2
+      }
+    ]
   }
 ];
 
@@ -388,23 +496,77 @@ export const currentCalls: TicketCall[] = [
   }
 ];
 
-export const connectors = [
-  { id: "int_1", name: "HIS Connector", type: "REST outbound", status: "Online" },
-  { id: "int_2", name: "CRM Webhook", type: "Webhook", status: "Online" },
-  { id: "int_3", name: "Coverage Validator", type: "REST validation", status: "Sandbox" }
+export const connectors: IntegrationConnector[] = [
+  {
+    id: "int_1",
+    unitId: "unit_samap",
+    code: "his-rest",
+    name: "HIS Connector",
+    type: "REST outbound",
+    status: "Online",
+    endpoint: "https://his.example.com/api/tickets",
+    enabled: true,
+    events: ["ticket.emitted", "ticket.called", "attendance.finished"]
+  },
+  {
+    id: "int_2",
+    unitId: "unit_samap",
+    code: "crm-webhook",
+    name: "CRM Webhook",
+    type: "Webhook",
+    status: "Online",
+    endpoint: "https://crm.example.com/hooks/tickets",
+    enabled: true,
+    events: ["ticket.pre_emit", "ticket.emitted"]
+  },
+  {
+    id: "int_3",
+    unitId: "unit_laboratorio",
+    code: "coverage-validator",
+    name: "Coverage Validator",
+    type: "REST validation",
+    status: "Sandbox",
+    endpoint: "https://validator.example.com/coverage/check",
+    enabled: true,
+    events: ["ticket.pre_emit"]
+  }
 ];
 
 export const profileItems = [
-  { id: "pf_superadmin", name: "Superadmin", scope: "Global" },
-  { id: "pf_admin_unit", name: "Admin de unidad", scope: "Unidad" },
-  { id: "pf_triage", name: "Operador de triage", scope: "Operacion" },
-  { id: "pf_attendance", name: "Atencion", scope: "Puesto" }
+  {
+    id: "pf_superadmin",
+    code: "SUPERADMIN",
+    name: "Superadmin",
+    scope: "Global",
+    permissions: ["overview", "catalog", "settings", "users", "attendance", "media", "print", "panel", "integrations", "triage"]
+  },
+  {
+    id: "pf_admin_unit",
+    code: "UNIT_ADMIN",
+    name: "Admin de unidad",
+    scope: "Unidad",
+    permissions: ["overview", "catalog", "settings", "users", "attendance", "media", "print", "panel", "integrations", "triage"]
+  },
+  {
+    id: "pf_triage",
+    code: "TRIAGE",
+    name: "Operador de triage",
+    scope: "Operacion",
+    permissions: ["triage"]
+  },
+  {
+    id: "pf_attendance",
+    code: "ATTENDANCE",
+    name: "Atencion",
+    scope: "Puesto",
+    permissions: ["attendance"]
+  }
 ];
 
 export const adminUsers = [
-  { id: "usr_1", name: "Administrador General", email: "admin@saa.com.py", profile: "Superadmin" },
-  { id: "usr_2", name: "Andrea Planas", email: "andrea@saa.com.py", profile: "Atencion" },
-  { id: "usr_3", name: "Luis Ferreira", email: "luis@saa.com.py", profile: "Atencion" }
+  { id: "usr_1", name: "Administrador General", email: "admin@saa.com.py", profile: "Superadmin", profileCode: "SUPERADMIN", unitId: "unit_samap" },
+  { id: "usr_2", name: "Andrea Planas", email: "andrea@saa.com.py", profile: "Atencion", profileCode: "ATTENDANCE", unitId: "unit_samap" },
+  { id: "usr_3", name: "Luis Ferreira", email: "luis@saa.com.py", profile: "Atencion", profileCode: "ATTENDANCE", unitId: "unit_laboratorio" }
 ];
 
 export const audioProfiles: Record<SupportedLocale, AudioProfile> = {

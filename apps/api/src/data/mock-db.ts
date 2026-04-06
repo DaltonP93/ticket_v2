@@ -3,6 +3,8 @@ import type {
   Department,
   Desk,
   Location,
+  MediaAsset,
+  PanelPlaylist,
   PanelProfile,
   ServiceCatalogItem,
   SupportedLocale,
@@ -33,6 +35,7 @@ export const departments: Department[] = [
 export const services: ServiceCatalogItem[] = [
   {
     id: "srv_caja",
+    unitId: "unit_samap",
     code: "CAJA",
     name: "Caja general",
     departmentId: "dep_cajas",
@@ -41,6 +44,7 @@ export const services: ServiceCatalogItem[] = [
   },
   {
     id: "srv_laboratorio",
+    unitId: "unit_samap",
     code: "LAB",
     name: "Laboratorio",
     departmentId: "dep_estudios",
@@ -49,6 +53,7 @@ export const services: ServiceCatalogItem[] = [
   },
   {
     id: "srv_consultas",
+    unitId: "unit_samap",
     code: "CON",
     name: "Consultas medicas",
     departmentId: "dep_consultas",
@@ -108,6 +113,7 @@ export const desks: Desk[] = [
 export const ticketTypes: TicketType[] = [
   {
     id: "tt_normal",
+    unitId: "unit_samap",
     code: "NORMAL",
     name: "Normal",
     description: "Atencion estandar",
@@ -124,6 +130,7 @@ export const ticketTypes: TicketType[] = [
   },
   {
     id: "tt_priority",
+    unitId: "unit_samap",
     code: "PRIORITY",
     name: "Prioridad",
     description: "Atencion preferente",
@@ -141,6 +148,7 @@ export const ticketTypes: TicketType[] = [
   },
   {
     id: "tt_schedule",
+    unitId: "unit_samap",
     code: "SCHEDULED",
     name: "Agendado",
     description: "Turno con cita previa",
@@ -151,6 +159,40 @@ export const ticketTypes: TicketType[] = [
     baseWeight: 5,
     requireClient: true,
     requireDocument: true,
+    requireExternalValidation: false,
+    allowPrint: true,
+    allowPanel: true
+  },
+  {
+    id: "tt_laboratorio_normal",
+    unitId: "unit_laboratorio",
+    code: "LAB_NORMAL",
+    name: "Normal",
+    description: "Atencion laboratorio",
+    prefix: "L",
+    color: "#13315c",
+    textColor: "#ffffff",
+    icon: "ticket",
+    baseWeight: 0,
+    requireClient: false,
+    requireDocument: false,
+    requireExternalValidation: false,
+    allowPrint: true,
+    allowPanel: true
+  },
+  {
+    id: "tt_laboratorio_priority",
+    unitId: "unit_laboratorio",
+    code: "LAB_PRIORITY",
+    name: "Prioridad",
+    description: "Atencion preferente laboratorio",
+    prefix: "LP",
+    color: "#c1121f",
+    textColor: "#ffffff",
+    icon: "shield",
+    baseWeight: 10,
+    requireClient: false,
+    requireDocument: false,
     requireExternalValidation: false,
     allowPrint: true,
     allowPanel: true
@@ -180,10 +222,13 @@ export const unitSettings: UnitSettings[] = [
     printShowTicketType: true,
     printShowUnitName: true,
     printShowServiceName: true,
+    printTemplateId: "tpl_default",
     triageServiceIds: ["srv_caja", "srv_laboratorio", "srv_consultas"],
     panelShowHistory: true,
     panelShowClock: true,
     panelPrimaryMediaId: "media_001",
+    panelProfileId: "pp_default",
+    panelPlaylistId: "playlist_samap",
     panelBrandingText: "Sistema de Ticket V2",
     webhooks: {
       preTicket: "",
@@ -224,6 +269,74 @@ export const unitSettings: UnitSettings[] = [
       visibleServiceIds: ["srv_caja", "srv_laboratorio", "srv_consultas"],
       visibleDepartmentIds: ["dep_cajas", "dep_estudios", "dep_consultas"]
     }
+  }
+];
+
+export const printTemplates = [
+  {
+    id: "tpl_default",
+    name: "Ticket institucional",
+    scope: "Unidad",
+    unit: "Unidad Local",
+    header: "SAMAP Medicina Prepaga",
+    footer: "Presente su documento y aguarde el llamado en pantalla.",
+    html: "<div class=\"ticket\"><h1>{{ticket.sequence}}</h1></div>"
+  }
+];
+
+export const mediaAssets: MediaAsset[] = [
+  {
+    id: "media_001",
+    unitId: "unit_samap",
+    title: "Video institucional principal",
+    kind: "video",
+    url: "https://www.w3schools.com/html/mov_bbb.mp4",
+    durationSeconds: 20
+  },
+  {
+    id: "media_002",
+    unitId: "unit_samap",
+    title: "Chequeo preventivo",
+    kind: "image",
+    url: "https://placehold.co/1200x675?text=Chequeo+preventivo",
+    durationSeconds: 12
+  },
+  {
+    id: "media_003",
+    unitId: "unit_samap",
+    title: "Promocion laboratorio",
+    kind: "image",
+    url: "https://placehold.co/1200x675?text=Promocion+Laboratorio",
+    durationSeconds: 12
+  }
+];
+
+export const panelPlaylists: PanelPlaylist[] = [
+  {
+    id: "playlist_samap",
+    unitId: "unit_samap",
+    name: "Rotacion principal",
+    active: true,
+    items: [
+      {
+        id: "playlist_item_001",
+        assetId: "media_001",
+        title: "Video institucional principal",
+        kind: "video",
+        url: "https://www.w3schools.com/html/mov_bbb.mp4",
+        durationSeconds: 20,
+        position: 1
+      },
+      {
+        id: "playlist_item_002",
+        assetId: "media_002",
+        title: "Chequeo preventivo",
+        kind: "image",
+        url: "https://placehold.co/1200x675?text=Chequeo+preventivo",
+        durationSeconds: 12,
+        position: 2
+      }
+    ]
   }
 ];
 

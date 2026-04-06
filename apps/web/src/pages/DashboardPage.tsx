@@ -1,30 +1,41 @@
 import type { SupportedLocale } from "@ticket-v2/contracts";
-import { connectors, recentTickets, serviceItems, stats, ticketTypeItems } from "../mock-api";
 import { translate } from "../i18n";
+import { useTicketSystem } from "../store";
 
 interface DashboardPageProps {
   locale: SupportedLocale;
 }
 
 export function DashboardPage({ locale }: DashboardPageProps) {
+  const { connectors, recentTickets, services, ticketTypes } = useTicketSystem();
+  const ticketsToday = recentTickets.length;
+  const waitSamples = recentTickets
+    .map((ticket) => Number(ticket.metadata.waitMinutes))
+    .filter((value) => Number.isFinite(value) && value >= 0);
+  const averageWaitMinutes = waitSamples.length
+    ? Math.round(waitSamples.reduce((sum, value) => sum + value, 0) / waitSamples.length)
+    : null;
+  const activeServices = services.length;
+  const integrationsOnline = connectors.filter((item) => item.enabled && item.status.toLowerCase() === "online").length;
+
   return (
     <section className="page-grid">
       <div className="metrics-grid">
         <article className="metric-card">
           <span>{translate(locale, "ticketsToday")}</span>
-          <strong>{stats.ticketsToday}</strong>
+          <strong>{ticketsToday}</strong>
         </article>
         <article className="metric-card">
           <span>{translate(locale, "averageWait")}</span>
-          <strong>{stats.averageWaitMinutes} min</strong>
+          <strong>{averageWaitMinutes === null ? "--" : `${averageWaitMinutes} min`}</strong>
         </article>
         <article className="metric-card">
           <span>{translate(locale, "activeServices")}</span>
-          <strong>{stats.activeServices}</strong>
+          <strong>{activeServices}</strong>
         </article>
         <article className="metric-card">
           <span>{translate(locale, "integrationsOnline")}</span>
-          <strong>{stats.integrationsOnline}</strong>
+          <strong>{integrationsOnline}</strong>
         </article>
       </div>
 
@@ -35,7 +46,7 @@ export function DashboardPage({ locale }: DashboardPageProps) {
             <span>{translate(locale, "richExperience")}</span>
           </div>
           <div className="ticket-type-grid">
-            {ticketTypeItems.map((item) => (
+            {ticketTypes.map((item) => (
               <div
                 key={item.id}
                 className="ticket-type-card"
@@ -54,7 +65,7 @@ export function DashboardPage({ locale }: DashboardPageProps) {
             <span>{translate(locale, "operationByDepartment")}</span>
           </div>
           <div className="list-table">
-            {serviceItems.map((item) => (
+            {services.map((item) => (
               <div key={item.id} className="list-row">
                 <strong>{item.name}</strong>
                 <span>{item.code}</span>

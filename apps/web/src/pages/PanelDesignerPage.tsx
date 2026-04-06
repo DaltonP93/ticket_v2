@@ -1,13 +1,14 @@
-import type { SupportedLocale } from "@ticket-v2/contracts";
-import { audioProfiles, currentCalls, panelProfile, recentTickets } from "../mock-api";
+import type { PanelProfile, SupportedLocale } from "@ticket-v2/contracts";
 import { translate } from "../i18n";
 import { speakAnnouncement } from "../lib/audio";
+import { useTicketSystem } from "../store";
 
 interface PanelDesignerPageProps {
   locale: SupportedLocale;
 }
 
 export function PanelDesignerPage({ locale }: PanelDesignerPageProps) {
+  const { audioProfiles, currentCalls, panelProfile, recentTickets, updatePanelProfile } = useTicketSystem();
   const audioProfile = audioProfiles[locale];
   const previewText =
     currentCalls[0]?.announcementText ??
@@ -28,7 +29,7 @@ export function PanelDesignerPage({ locale }: PanelDesignerPageProps) {
           <div className="form-grid">
             <label>
               {translate(locale, "layout")}
-              <select defaultValue={panelProfile.layout}>
+              <select value={panelProfile.layout} onChange={(event) => updatePanelProfile({ layout: event.target.value as PanelProfile["layout"] })}>
                 <option value="calls-only">Solo llamadas</option>
                 <option value="calls-history">Llamadas + historial</option>
                 <option value="calls-media">Llamadas + multimedia</option>
@@ -37,17 +38,17 @@ export function PanelDesignerPage({ locale }: PanelDesignerPageProps) {
 
             <label>
               {translate(locale, "accentColor")}
-              <input type="color" defaultValue={panelProfile.theme.accent} />
+              <input type="color" value={panelProfile.theme.accent} onChange={(event) => updatePanelProfile({ theme: { accent: event.target.value } })} />
             </label>
 
             <label>
               {translate(locale, "background")}
-              <input type="color" defaultValue={panelProfile.theme.background} />
+              <input type="color" value={panelProfile.theme.background} onChange={(event) => updatePanelProfile({ theme: { background: event.target.value } })} />
             </label>
 
             <label>
               {translate(locale, "textColor")}
-              <input type="color" defaultValue={panelProfile.theme.text} />
+              <input type="color" value={panelProfile.theme.text} onChange={(event) => updatePanelProfile({ theme: { text: event.target.value } })} />
             </label>
           </div>
 

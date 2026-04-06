@@ -12,6 +12,9 @@ export interface AuthUser {
   fullName: string;
   locale: string;
   profile: string;
+  profileCode: string;
+  permissions?: string[];
+  unitId: string | null;
   unit: string | null;
 }
 
@@ -42,7 +45,16 @@ export function getStoredToken() {
 
 export function getStoredUser(): AuthUser | null {
   const raw = window.localStorage.getItem(USER_KEY);
-  return raw ? (JSON.parse(raw) as AuthUser) : null;
+  if (!raw) {
+    return null;
+  }
+
+  const parsed = JSON.parse(raw) as AuthUser;
+
+  return {
+    ...parsed,
+    permissions: Array.isArray(parsed.permissions) ? parsed.permissions.filter((item): item is string => typeof item === "string") : []
+  };
 }
 
 export function logout() {

@@ -17,6 +17,7 @@ export interface Department {
 
 export interface ServiceCatalogItem {
   id: Identifier;
+  unitId: Identifier;
   code: string;
   name: string;
   departmentId: Identifier;
@@ -42,6 +43,7 @@ export interface Desk {
 
 export interface TicketType {
   id: Identifier;
+  unitId?: Identifier;
   code: string;
   name: string;
   description: string;
@@ -79,10 +81,13 @@ export interface UnitSettings {
   printShowTicketType: boolean;
   printShowUnitName: boolean;
   printShowServiceName: boolean;
+  printTemplateId?: Identifier;
   triageServiceIds: Identifier[];
   panelShowHistory: boolean;
   panelShowClock: boolean;
   panelPrimaryMediaId?: Identifier;
+  panelProfileId?: Identifier;
+  panelPlaylistId?: Identifier;
   panelBrandingText?: string;
   webhooks: {
     preTicket: string;
@@ -135,6 +140,55 @@ export interface PanelProfile {
     accent: string;
     text: string;
   };
+}
+
+export interface PrintTemplate {
+  id: Identifier;
+  name: string;
+  scope: string;
+  unit: string;
+  header: string;
+  footer: string;
+  html: string;
+}
+
+export interface MediaAsset {
+  id: Identifier;
+  unitId?: Identifier;
+  title: string;
+  kind: string;
+  url: string;
+  durationSeconds: number;
+}
+
+export interface PanelPlaylistItem {
+  id: Identifier;
+  assetId: Identifier;
+  title: string;
+  kind: string;
+  url: string;
+  durationSeconds: number;
+  position: number;
+}
+
+export interface PanelPlaylist {
+  id: Identifier;
+  unitId?: Identifier;
+  name: string;
+  active: boolean;
+  items: PanelPlaylistItem[];
+}
+
+export interface IntegrationConnector {
+  id: Identifier;
+  unitId?: Identifier;
+  code: string;
+  name: string;
+  type: string;
+  status: string;
+  endpoint?: string;
+  enabled: boolean;
+  events: string[];
 }
 
 export interface AudioProfile {

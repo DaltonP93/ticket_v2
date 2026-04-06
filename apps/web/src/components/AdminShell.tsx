@@ -16,6 +16,7 @@ interface AdminShellProps {
   onChangeLocale: (locale: SupportedLocale) => void;
   navigation: AdminNavItem[];
   userName: string | null;
+  userMeta?: string | null;
   onLogout: () => void;
   children: ReactNode;
 }
@@ -27,6 +28,7 @@ export function AdminShell({
   onChangeLocale,
   navigation,
   userName,
+  userMeta,
   onLogout,
   children
 }: AdminShellProps) {
@@ -92,6 +94,7 @@ export function AdminShell({
 
           <div className="topbar-meta">
             {userName ? <span>{userName}</span> : null}
+            {userMeta ? <span>{userMeta}</span> : null}
             <button className="route-pill" onClick={onLogout} type="button">Salir</button>
             <span>{translate(locale, "version")}</span>
             <span>{dateLabel}</span>

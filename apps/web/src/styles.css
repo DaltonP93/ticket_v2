@@ -435,6 +435,17 @@ textarea {
   cursor: pointer;
 }
 
+.danger-button {
+  margin-top: 18px;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #b42318, #d92d20);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
 .button-row {
   display: flex;
   gap: 12px;
@@ -586,6 +597,12 @@ textarea {
   margin-top: 0;
 }
 
+.split-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 24px;
+}
+
 .selectable-row {
   display: flex;
   justify-content: space-between;
@@ -603,6 +620,11 @@ textarea {
   color: var(--accent-strong);
 }
 
+.selectable-row.selected {
+  color: var(--accent-strong);
+  background: rgba(0, 109, 119, 0.08);
+}
+
 .stacked-row {
   align-items: center;
 }
@@ -614,6 +636,10 @@ textarea {
 .checklist {
   display: grid;
   gap: 12px;
+}
+
+.compact-checklist {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .check-item {
@@ -803,7 +829,22 @@ textarea {
   gap: 16px;
 }
 
+.service-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .desk-card {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+}
+
+.service-monitor-card {
   padding: 18px;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.6);
@@ -1075,6 +1116,7 @@ textarea {
   .service-button-grid,
   .service-kiosk-grid,
   .desk-grid,
+  .service-monitor-grid,
   .history-ticket-grid,
   .content-grid.three-up,
   .attendance-grid {
